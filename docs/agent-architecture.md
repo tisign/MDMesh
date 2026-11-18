@@ -61,6 +61,13 @@ kiosk, even offline; the button is available only outside kiosk on Device Owner 
 it. It asks first, says so when that kiosk has no exit on the device, enters only the kiosk that was confirmed, and
 finishes the entry even if the screen goes away (a rotation); once in kiosk it queues a check-in. A newer delivered kiosk-off configuration removes the option even if another policy failed; a remote
 `kiosk.exit` leaves it available while the configuration still enables kiosk.
+The status activity never locks itself (`lockTaskMode` is unset): with `if_whitelisted` Android locked its task the
+moment an entry allowlisted the agent while it was in front, making it the root locked task under the launcher, and
+Back on the kiosk HOME then showed it, locked, with no way back. The launcher is the only root locked task, is
+started as a HOME intent (a component-explicit start gives a standard task, and the next Home press a second
+launcher), ignores Back while a kiosk is on, and pins itself again on every resume. A return on the device always
+locks and shows the kiosk (`KioskApplier.enterShown`), never "already in this kiosk"; and while a kiosk is saved
+the status screen offers the way back to it (`KioskApplier.showSaved`), lock task on or not.
 
 **The 26 enforced fields**
 

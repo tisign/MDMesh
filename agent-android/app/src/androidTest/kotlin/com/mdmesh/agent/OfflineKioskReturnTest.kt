@@ -1,5 +1,6 @@
 package com.mdmesh.agent
 
+import android.accessibilityservice.AccessibilityService
 import android.app.ActivityManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -139,6 +140,43 @@ class OfflineKioskReturnTest {
         } finally {
             eventLog.restore(events)
         }
+        // Return to kiosk is tapped on the status screen, which Android then locked as the root task, under the
+        // kiosk HOME: Back on the HOME showed it again, locked, with no way back into the kiosk.
+        pressBack()
+        assertTrue("Back left the kiosk HOME", node("Exit kiosk") != null)
+        assertTrue(locked())
+    }
+
+    /**
+     * The same from the server's side: a kiosk that arrives while the status screen is open (staff watching a new
+     * device enroll). Back on the kiosk HOME stays on it.
+     */
+    @Test
+    fun backStaysOnTheKioskHomeWhenTheKioskArrivedWithTheStatusScreenOpen() = runBlocking {
+        openAgent()
+        awaitCondition { node("Kiosk") != null }
+        enterKiosk()
+        pressBack()
+        captureScreen("offline-kiosk-after-back.png")
+        assertTrue("Back left the kiosk HOME", node("Exit kiosk") != null)
+        assertTrue(locked())
+        assertEquals(payload, store.load())
+    }
+
+    /**
+     * The status screen opened in front of a running kiosk (from the agent's notification, or as an allowed app) is
+     * never a dead end: it offers the way back, and takes it without asking.
+     */
+    @Test
+    fun theStatusScreenInFrontOfARunningKioskOffersTheWayBack() = runBlocking {
+        enterKiosk()
+        openAgent()
+        awaitCondition { node("Back to kiosk")?.isEnabled == true }
+        captureScreen("offline-kiosk-back-to-kiosk.png")
+        click("Back to kiosk")
+        awaitCondition { node("Exit kiosk") != null }
+        assertTrue(locked())
+        assertEquals(payload, store.load())
     }
 
     @Test
@@ -192,6 +230,21 @@ class OfflineKioskReturnTest {
         return (0 until root.childCount).firstNotNullOfOrNull { findNode(root.getChild(it), matches) }
     }
 
+    /** The configuration's kiosk arrives and the device is on its HOME, locked. */
+    private suspend fun enterKiosk() {
+        val result = configApplier.apply(ConfigApplyPayload(revision = "test-on", kiosk = payload))
+        assertTrue(ConfigApplier.succeeded(result))
+        awaitCondition { locked() && node("Exit kiosk") != null }
+    }
+
+    /** Back, a few times and unhurried: one press must not leave the screen, nor the next. */
+    private fun pressBack() {
+        repeat(BACK_PRESSES) {
+            ui.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+            SystemClock.sleep(BACK_SETTLE_MS)
+        }
+    }
+
     private fun click(text: String) {
         assertTrue("Cannot click $text", requireNotNull(node(text)).performAction(AccessibilityNodeInfo.ACTION_CLICK))
     }
@@ -210,5 +263,7 @@ class OfflineKioskReturnTest {
         const val TIMEOUT_MS = 15_000L
         const val POLL_MS = 100L
         const val SCREEN_IDLE_MS = 500L
+        const val BACK_PRESSES = 3
+        const val BACK_SETTLE_MS = 700L
     }
 }

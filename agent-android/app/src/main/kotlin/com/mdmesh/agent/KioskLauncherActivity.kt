@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -118,6 +119,16 @@ class KioskLauncherActivity : ComponentActivity() {
     /** Acts once per return to the front, whichever of onResume and the kiosk delivery comes first. */
     private val resumeGate = HomeResumeGate()
 
+    /**
+     * Back never dismisses the kiosk HOME while a kiosk is on (enabled with it, in [applyState]). Android itself only
+     * refuses Back on the root locked task. Whenever another task holds that place (an allowed app that locks itself
+     * and was in front when the kiosk was entered), Back would finish the launcher and show what was under it:
+     * outside the kiosk's own screens, while the saved state still says kiosk.
+     */
+    private val kioskBack = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = Unit
+    }
+
     /** The display density the grid's icons were loaded for. */
     private var densityDpi = 0
 
@@ -146,6 +157,7 @@ class KioskLauncherActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         dialogs.restore(savedInstanceState)
         unavailableFor = savedInstanceState?.getString(UNAVAILABLE_FOR_KEY)
+        onBackPressedDispatcher.addCallback(this, kioskBack)
         // A kiosk device boots straight into HOME (this); keep the command channel alive even if
         // the user never opens the status screen.
         ContextCompat.startForegroundService(this, Intent(this, CheckInService::class.java))
@@ -242,6 +254,9 @@ class KioskLauncherActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Back in front with a kiosk on: pinned again if lock task ended meanwhile (the root locked task going away
+        // unlocks every task). A resume without a restart gets no delivery that would do it.
+        if (active != null) startLockTaskSafely()
         if (resumeGate.onResume() == HomeResumeGate.Step.RETURN) onReturnedToFront()
     }
 
@@ -282,6 +297,7 @@ class KioskLauncherActivity : ComponentActivity() {
         val restored = dialogs.takeRestored()
         val previous = active
         active = p
+        kioskBack.isEnabled = p != null
         // On every kiosk state (each HomeResumeGate step, so a failed image is retried when HOME comes back): the
         // image only repaints the backdrop, it never reopens the pinned app or clears a hold.
         showBackdrop(p)

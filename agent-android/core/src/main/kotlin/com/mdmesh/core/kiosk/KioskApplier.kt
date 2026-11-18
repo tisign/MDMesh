@@ -80,13 +80,41 @@ class KioskApplier(
 
     suspend fun enter(p: KioskApplyPayload): KioskResult = mutex.withLock { enterLocked(p) }
 
-    /** [reassert]: skip the "already in this kiosk" short-circuit (a relock after a cut-off exit). */
-    private suspend fun enterLocked(p: KioskApplyPayload, reassert: Boolean = false): KioskResult {
+    /**
+     * Someone on the device asked to be in [p] now (Return to kiosk). Unlike [enter], it is not taken on trust that
+     * the device is already there. Lock task being on only says that some task is locked: not that it is the kiosk
+     * launcher's, nor that the launcher is what shows (the status screen the person is tapping on may be). Believing
+     * it left them outside the kiosk with a Return that did nothing. So the kiosk is locked again and its launcher
+     * brought forward, every time.
+     */
+    suspend fun enterShown(p: KioskApplyPayload): KioskResult = mutex.withLock { enterLocked(p, shown = true) }
+
+    /**
+     * [enterShown] for the kiosk saved now, whichever it is (the configuration's, or a custom one from the console):
+     * the way back from the status screen while the device is, or should be, in a kiosk. Failed with [NO_KIOSK] when
+     * none is saved (it ended while the person was tapping): nothing is entered.
+     */
+    suspend fun showSaved(): KioskResult = mutex.withLock {
+        val saved = store.load() ?: return@withLock KioskResult.Failed(NO_KIOSK)
+        enterLocked(saved, shown = true)
+    }
+
+    /**
+     * [reassert]: skip the "already in this kiosk" short-circuit (a relock after a cut-off exit).
+     * [shown]: skip it as well, for a person waiting on the device ([enterShown]). Entering the kiosk already saved
+     * is then a relock as far as the exit journal goes; a different one supersedes an entry like any new kiosk.
+     */
+    private suspend fun enterLocked(
+        p: KioskApplyPayload,
+        reassert: Boolean = false,
+        shown: Boolean = false,
+    ): KioskResult {
         val current = store.load()
         val pending = withContext(io) { journal.pending() }
+        val same = p.sameKioskAs(current)
         return when {
-            !reassert && p.sameKioskAs(current) && isLockTaskActive() -> stayIn(p, current, pending)
-            !supersede(pending, reassert) -> KioskResult.Failed("kiosk exit journal not writable")
+            !reassert && !shown && same && isLockTaskActive() -> stayIn(p, current, pending)
+            !supersede(pending, reassert || (shown && same)) -> KioskResult.Failed("kiosk exit journal not writable")
             else -> lockIn(p, current, pending)
         }
     }
@@ -389,6 +417,9 @@ class KioskApplier(
 
         /** [exit]'s reason when the kiosk it was asked for was replaced before it ran: nothing was changed. */
         const val EXIT_SUPERSEDED = "kiosk replaced before the exit ran"
+
+        /** [showSaved]'s reason when no kiosk is saved: nothing was entered. */
+        const val NO_KIOSK = "No kiosk is running on this device."
     }
 
     /** True when a kiosk payload is persisted (device believes it is / should be in kiosk). */

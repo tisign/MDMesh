@@ -55,6 +55,8 @@ class ConfigApplier(
      * lock as config.apply so an older button click cannot restore a kiosk a newer configuration disabled.
      * [expected], when given, is the kiosk the person confirmed (its exit, above all): a different one delivered
      * since is refused rather than entered unseen.
+     * Always locks and shows the kiosk ([KioskApplier.enterShown]): the person is looking at the status screen, so
+     * "already in this kiosk" is never the answer, whatever the saved state and lock task say.
      */
     suspend fun returnToConfiguredKiosk(expected: KioskApplyPayload? = null): KioskResult = mutex.withLock {
         val payload = store.configuredKiosk()
@@ -62,7 +64,7 @@ class ConfigApplier(
         if (expected != null && payload != expected) {
             return@withLock KioskResult.Failed("The kiosk settings just changed. Check them and try again.")
         }
-        kiosk.enter(payload)
+        kiosk.enterShown(payload)
     }
 
     suspend fun apply(doc: ConfigApplyPayload): ConfigApplyResult = mutex.withLock { applyDeliveredLocked(doc) }

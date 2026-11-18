@@ -18,9 +18,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * MDMesh agent home / status screen. Doubles as the kiosk HOME surface
- * (`android:lockTaskMode="if_whitelisted"` + HOME intent filter), so when the agent's
- * package is lock-task-allowlisted the system auto-enters lock task here.
+ * MDMesh agent status screen. It never enters lock task by itself: the kiosk launcher is the root locked task,
+ * also when staff return to the kiosk from here (see the manifest).
  *
  * Shows the real managed state — Device-Owner status, server-issued device id, kiosk state,
  * and the server URL — so a person looking at the device can see it's managed by MDMesh.
@@ -38,7 +37,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_status)
-        val screen = StatusScreen(this, onReturn = ::confirmReturnToKiosk, onCopy = model::copy)
+        val screen = StatusScreen(this, onReturn = ::returnTapped, onCopy = model::copy)
         screen.render(model.state.value)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -58,7 +57,9 @@ class MainActivity : ComponentActivity() {
         ContextCompat.startForegroundService(this, Intent(this, CheckInService::class.java))
         // Reopen the confirmation a rotation closed, if returning is still possible (the button says so).
         dialogs.restore(savedInstanceState)
-        if (dialogs.takeRestored() == DIALOG_RETURN && model.state.value.kiosk.returnEnabled) confirmReturnToKiosk()
+        // Only ever the question again, never the action: a kiosk that came on meanwhile is not gone back to unasked.
+        val kiosk = model.state.value.kiosk
+        if (dialogs.takeRestored() == DIALOG_RETURN && kiosk.returnEnabled && !kiosk.resumes) confirmReturnToKiosk()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -82,10 +83,17 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
+    /** The Kiosk card's button. */
+    private fun returnTapped() {
+        val kiosk = model.state.value.kiosk
+        if (kiosk.returning || dialogs.showing != null) return
+        // A kiosk is saved: straight back to it. It locks nothing the device isn't already held in, so it asks nothing.
+        if (kiosk.resumes) model.backToKiosk() else confirmReturnToKiosk()
+    }
+
     /** Ask first: returning locks the device, and some kiosks have no exit on the device at all. */
     private fun confirmReturnToKiosk() {
-        if (model.state.value.kiosk.returning || dialogs.showing != null) return
-        val kiosk = model.configuredKiosk() ?: return model.refresh()
+        val kiosk = model.configuredKiosk ?: return model.refresh()
         val prompt = KioskReturnPrompt.of(kiosk)
         val spec = MdmDialog.Spec(
             title = getString(prompt.title),

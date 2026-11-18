@@ -109,8 +109,13 @@ class A11yScreens {
 
     // ---- status screen ----
 
-    /** The status screen with [kiosk] configured, drawn from [state] (null: the screen's own state). */
+    /**
+     * The status screen with [kiosk] configured and none running, drawn from [state] (null: the screen's own state).
+     * The saved kiosk is cleared first: the kiosk store is one per process, and one left by an earlier launcher test
+     * would make this screen offer the way back to it instead of Return to kiosk.
+     */
     fun status(kiosk: KioskApplyPayload?, state: StatusUiState?): MainActivity {
+        runBlocking { DataStoreKioskStateStore(app).save(null) }
         val store = SharedPrefsConfigStateStore(app)
         if (kiosk == null) store.clear() else store.save(ConfigApplyPayload(revision = "a".repeat(64), kiosk = kiosk))
         val a = start(Robolectric.buildActivity(MainActivity::class.java))
@@ -132,6 +137,7 @@ class A11yScreens {
         returnFailure: String? = null,
         copied: StatusCopy.Target? = null,
         credentialsLost: Boolean = false,
+        kioskSaved: Boolean = false,
     ): StatusUiState = StatusUiState.of(
         deviceOwner = deviceOwner,
         locked = locked,
@@ -144,6 +150,7 @@ class A11yScreens {
         returning = returning,
         returnFailure = returnFailure,
         credentialsLost = credentialsLost,
+        kioskSaved = kioskSaved,
     ).copy(copied = copied)
 
     fun returnDialog(kiosk: KioskApplyPayload): Dialog {

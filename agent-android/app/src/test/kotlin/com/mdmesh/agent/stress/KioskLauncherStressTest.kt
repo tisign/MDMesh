@@ -530,6 +530,54 @@ class KioskLauncherStressTest : KioskHarness() {
         assertNotNull(storedKiosk())
     }
 
+    // --- Staying on the kiosk HOME ---------------------------------------------------------------------------------
+
+    /**
+     * Android refuses Back only on the root locked task. When another task held that place, Back finished the kiosk
+     * HOME and showed what was under it, outside the kiosk while the saved state still said kiosk.
+     */
+    @Test fun backNeverDismissesTheKioskHome() {
+        for (kiosk in listOf(grid, single)) {
+            launch(kiosk)
+            activity.onBackPressedDispatcher.onBackPressed()
+            settle()
+            assertFalse("${kiosk.mode}: still there", activity.isFinishing)
+            assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, lockTaskState())
+            ctl!!.pause().stop().destroy()
+        }
+    }
+
+    /** With no kiosk the launcher is an ordinary screen again: Back leaves it. */
+    @Test fun backLeavesTheIdleScreen() {
+        launch(null)
+        activity.onBackPressedDispatcher.onBackPressed()
+        settle()
+        assertTrue(activity.isFinishing)
+    }
+
+    /** Back is given back as soon as the kiosk ends (a remote exit), and taken again when one is entered. */
+    @Test fun backFollowsTheKiosk() {
+        launch(grid)
+        saveKiosk(null)
+        settle()
+        activity.onBackPressedDispatcher.onBackPressed()
+        settle()
+        assertTrue("no kiosk: Back works", activity.isFinishing)
+    }
+
+    /**
+     * Lock task ended under the launcher (the root locked task went away) while it was only paused: no restart, so
+     * no delivery pins it again. The resume does.
+     */
+    @Test fun resumeWithoutARestartPinsAgain() {
+        launch(grid)
+        activity.stopLockTask()
+        assertEquals(ActivityManager.LOCK_TASK_MODE_NONE, lockTaskState())
+        ctl!!.pause().resume()
+        settle()
+        assertEquals(ActivityManager.LOCK_TASK_MODE_LOCKED, lockTaskState())
+    }
+
     @Test fun freshLauncherInstanceWhileInKioskRelocks() {
         launch(grid)
         activity.stopLockTask()

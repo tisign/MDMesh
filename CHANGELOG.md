@@ -9,6 +9,12 @@ Unreleased.
 
 ## Unreleased
 
+Fixes
+- Kiosk: Back on the kiosk home could land on the MDMesh status screen, still locked and with no Return to kiosk,
+  after a kiosk was entered while that screen was open (Return to kiosk always did that). The status screen is no
+  longer locked under the kiosk, Back stays on the kiosk home, and whenever a kiosk is on the status screen offers
+  **Back to kiosk** (or **Return to kiosk**, if Android dropped the lock). Needs the next agent release.
+
 ## v0.5.0 — 2026-11-17
 
 Upgrading

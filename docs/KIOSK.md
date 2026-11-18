@@ -153,6 +153,11 @@ With agent 0.5.0 or later, after the kiosk ends (with the exit PIN or from the c
 device offers **Return to kiosk** while the device's configuration has kiosk on. It works offline. A kiosk with no
 exit on the device asks once more before it locks, because only the console can unlock it.
 
+While a kiosk is on, the same screen offers **Back to kiosk** instead (agent after 0.5.0): it goes straight back to
+the kiosk's own screen, asking nothing, because nothing new is locked. If Android has dropped the lock under a
+running kiosk, the screen says the device isn't locked to its kiosk and **Return to kiosk** locks it again. Either
+way, the MDMesh app in front of a running kiosk is never a dead end.
+
 ## Offline devices
 
 A kiosk keeps running without a network. The exit PIN, the lockout and Return to kiosk work offline, and events are

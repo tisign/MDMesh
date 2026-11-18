@@ -30,6 +30,8 @@
     <string name="status_kiosk_on">Active</string>
     <string name="status_kiosk_off">Off</string>
     <string name="status_kiosk_body_locked">This device is locked to the kiosk.</string>
+    <!-- A kiosk is on (saved) but Android's lock task isn't: the button under it locks the device again. -->
+    <string name="status_kiosk_body_unlocked">This device\'s kiosk is on, but the device isn\'t locked to it.</string>
     <string name="status_kiosk_body_ready">A kiosk is set up for this device but isn\'t running.</string>
     <string name="status_kiosk_body_off">No kiosk is running on this device.</string>
     <string name="status_agent_version">%1$s (build %2$d)</string>
@@ -43,6 +45,8 @@
     <!-- Return to kiosk (MainActivity + KioskReturnPrompt). OfflineKioskReturnTest finds these by text. -->
     <string name="kiosk_return_action">Return to kiosk</string>
     <string name="kiosk_return_busy">Returning…</string>
+    <!-- The same button while the device is locked in a kiosk: goes back to the kiosk\'s own screen, asks nothing. -->
+    <string name="kiosk_resume_action">Back to kiosk</string>
     <string name="kiosk_return_title">Return to kiosk?</string>
     <string name="kiosk_return_message">The device locks to the kiosk again. To leave it, you\'ll need the exit PIN.</string>
     <string name="kiosk_return_no_exit_title">Lock with no way out here?</string>

@@ -36,8 +36,9 @@ data class StatusUiState(
             returning: Boolean,
             returnFailure: String?,
             credentialsLost: Boolean = false,
+            kioskSaved: Boolean = false,
         ): StatusUiState {
-            val kiosk = KioskCardUi.of(deviceOwner, locked, configured, returning)
+            val kiosk = KioskCardUi.of(deviceOwner, locked, configured, returning, kioskSaved)
             return StatusUiState(
                 deviceOwner = deviceOwner,
                 deviceId = when {

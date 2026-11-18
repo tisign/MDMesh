@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.mdmesh.agent.admin.AdminReceiver
 import com.mdmesh.policy.CapabilityRegistry
 import com.mdmesh.policy.PolicyOutcome
+import com.mdmesh.policy.ReleasablePolicy
 import com.mdmesh.policy.TogglePolicy
 import com.mdmesh.policy.UserRestrictions
 import com.mdmesh.policy.camera.CameraPolicy
@@ -242,7 +243,7 @@ class DevicePolicyEffectTest {
                 // setEnabled deliberately locks the setting. Restore the pre-test lock state too, otherwise every
                 // instrumentation test leaves Settings unable to change Location even when it began unlocked.
                 if (!state.getValue(restrictionKey(UserRestrictions.DISALLOW_CONFIG_LOCATION))) {
-                    locationPolicy.release()
+                    (locationPolicy as? ReleasablePolicy)?.release()
                 }
             }
         }

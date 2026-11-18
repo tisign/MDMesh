@@ -188,6 +188,66 @@ class KioskApplierTest {
         assertNull("no lock-task re-entry", c.entered)
         assertTrue("no launcher relaunch (no flicker)", h.log.isEmpty())
     }
+    // --- A return on the device: never "already in this kiosk" ---
+
+    @Test fun `a return on the device locks and shows the kiosk even when it looks already entered`() = runTest {
+        // Lock task on (it was the status screen's task that was locked) with this kiosk saved read as "already in
+        // this kiosk": Return to kiosk did nothing, and the person stayed outside the kiosk.
+        val p = KioskApplyPayload(mode = "single", pinPackage = "com.a", allowedPackages = listOf("com.a"))
+        val c = FakeController(KioskResult.Ok); val h = FakeHome(); val store = InMemoryKioskStateStore(); store.save(p)
+        val a = KioskApplier(c, store, h, home) { true }
+        assertEquals(KioskResult.Ok, a.enter(p))
+        assertTrue("the server's re-send still relaunches nothing", h.log.isEmpty())
+        assertEquals(KioskResult.Ok, a.enterShown(p))
+        assertEquals("locked again", listOf(listOf("com.a")), c.enters)
+        assertEquals("and brought forward", listOf("claim:true", "launcher"), h.log)
+        assertEquals(p, store.load())
+    }
+    @Test fun `going back to the saved kiosk locks and shows it, lock task on or not`() = runTest {
+        // Whichever kiosk is saved: here a custom one from the console, which no configuration names.
+        val custom = KioskApplyPayload(mode = "launcher", allowedPackages = listOf("com.a", "com.b"))
+        for (locked in listOf(true, false)) {
+            val c = FakeController(KioskResult.Ok); val h = FakeHome(); val store = InMemoryKioskStateStore(custom)
+            assertEquals(KioskResult.Ok, KioskApplier(c, store, h, home) { locked }.showSaved())
+            assertEquals("locked=$locked", listOf(listOf("com.a", "com.b")), c.enters)
+            assertEquals("locked=$locked", listOf("claim:true", "launcher"), h.log)
+            assertEquals(custom, store.load())
+        }
+    }
+    @Test fun `going back with no kiosk saved enters nothing`() = runTest {
+        val c = FakeController(KioskResult.Ok); val h = FakeHome()
+        val r = KioskApplier(c, InMemoryKioskStateStore(), h, home) { false }.showSaved()
+        assertEquals(KioskResult.Failed(KioskApplier.NO_KIOSK), r)
+        assertNull(c.entered)
+        assertTrue(h.log.isEmpty())
+    }
+    @Test fun `going back to the saved kiosk settles a cut-off exit in kiosk`() = runTest {
+        val p = KioskApplyPayload(mode = "single", pinPackage = "com.a", allowedPackages = listOf("com.a"))
+        val j = MemJournal(); val store = InMemoryKioskStateStore(); store.save(p)
+        j.saved = ExitJournal.Pending(handBackHome = true, force = true, kiosk = ExitJournal.fingerprint(p))
+        val c = FakeController(KioskResult.Ok)
+        val a = KioskApplier(c, store, FakeHome(), home, journal = j, desiredKioskOn = { false }) { false }
+        assertEquals(KioskResult.Ok, a.showSaved())
+        assertNull("nothing left for the next start to finish as an exit", j.saved)
+        assertFalse(a.resumeInterruptedExit())
+        assertEquals(p, store.load())
+        assertFalse(c.exited)
+    }
+    @Test fun `going back to the saved kiosk goes on when a cut-off exit can't be marked`() = runTest {
+        // A relock is fail-closed: it locks whether or not the journal can be written (see supersede).
+        val p = KioskApplyPayload(mode = "single", pinPackage = "com.a", allowedPackages = listOf("com.a"))
+        val pending = ExitJournal.Pending(handBackHome = true, force = true, kiosk = ExitJournal.fingerprint(p))
+        val full = object : ExitJournal {
+            override fun pending() = pending
+            override fun begin(p: ExitJournal.Pending) = false
+            override fun end() = false
+        }
+        val c = FakeController(KioskResult.Ok); val h = FakeHome(); val store = InMemoryKioskStateStore(p)
+        assertEquals(KioskResult.Ok, KioskApplier(c, store, h, home, journal = full) { false }.showSaved())
+        assertEquals(listOf(listOf("com.a")), c.enters)
+        assertTrue("launcher" in h.log)
+    }
+
     @Test fun `same payload re-enters when lock task is not active, changed payload always re-enters`() = runTest {
         val p = KioskApplyPayload(mode = "single", pinPackage = "com.a", allowedPackages = listOf("com.a"))
         val store = InMemoryKioskStateStore(); store.save(p)

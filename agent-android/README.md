@@ -106,7 +106,8 @@ adb shell am instrument -w -r -e class com.mdmesh.agent.OfflineKioskReturnTest \
 
 CI neither compiles nor runs `OfflineKioskReturnTest`: build it with the first command above after changing the
 classes it uses. The tests skip unless running on an offline Device Owner Android emulator with no existing kiosk or
-saved/delivered configuration.
+saved/delivered configuration. It also covers Back on the kiosk HOME after a kiosk was entered with the status screen
+open, and the status screen's Back to kiosk.
 
 ### Getting OFF Device Owner (dev cycle)
 

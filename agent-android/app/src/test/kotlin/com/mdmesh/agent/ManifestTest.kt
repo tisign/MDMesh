@@ -57,6 +57,15 @@ class ManifestTest {
         assertEquals(".KioskLauncherActivity", alias.getAttributeNS(ANDROID, "targetActivity"))
     }
 
+    /**
+     * "if_whitelisted" here made the status screen the root locked task whenever a kiosk was entered while it was in
+     * front (Return to kiosk, or a kiosk arriving while staff watch the enrollment): Back on the kiosk HOME then
+     * showed the status screen, locked and with no Return to kiosk.
+     */
+    @Test fun `the status screen never locks itself, only the kiosk HOME does`() {
+        assertEquals("", component("activity", ".MainActivity").getAttributeNS(ANDROID, "lockTaskMode"))
+    }
+
     private companion object {
         const val ANDROID = "http://schemas.android.com/apk/res/android"
     }

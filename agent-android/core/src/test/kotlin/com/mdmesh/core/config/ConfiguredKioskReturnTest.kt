@@ -38,8 +38,9 @@ class ConfiguredKioskReturnTest {
     }
 
     private object Home : KioskHomeSwitch {
+        var shown = 0
         override fun setClaimEnabled(enabled: Boolean) = Unit
-        override fun showLauncher() = Unit
+        override fun showLauncher() { shown++ }
         override fun showOemHome() = Unit
     }
 
@@ -52,14 +53,27 @@ class ConfiguredKioskReturnTest {
         theme = KioskThemeDto(backgroundColor = "#123456"),
     )
 
-    private fun kiosk(store: KioskStateStore = active) =
-        KioskApplier(controller, store, Home, ComponentName("agent", "home")) { false }
+    private fun kiosk(store: KioskStateStore = active, lockTaskOn: Boolean = false) =
+        KioskApplier(controller, store, Home, ComponentName("agent", "home")) { lockTaskOn }
 
     @Test fun `return restores the complete saved configuration without applying other sections`() = runTest {
         config.save(ConfigApplyPayload(revision = "saved", kiosk = payload))
         // No server or policy resolution is needed to return, including after the applier is recreated.
         val applier = ConfigApplier({ error("Must not reapply policies") }, kiosk(), {}, config, setPowerMode = {})
         assertEquals(KioskResult.Ok, applier.returnToConfiguredKiosk())
+        assertEquals(payload, active.load())
+    }
+
+    @Test fun `return locks and shows the kiosk although the agent believes it is already in it`() = runTest {
+        // The saved state says this kiosk and lock task is on (some task is locked), yet the person is on the status
+        // screen tapping Return to kiosk. "Already in this kiosk" left them there: it must lock and show it.
+        config.save(ConfigApplyPayload(revision = "saved", kiosk = payload))
+        active.save(payload)
+        Home.shown = 0
+        val applier = ConfigApplier(fixedToggles(), kiosk(lockTaskOn = true), {}, config, setPowerMode = {})
+        assertEquals(KioskResult.Ok, applier.returnToConfiguredKiosk(expected = payload))
+        assertEquals("locked again", 1, controller.enters)
+        assertEquals("launcher brought forward", 1, Home.shown)
         assertEquals(payload, active.load())
     }
 

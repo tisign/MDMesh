@@ -106,6 +106,18 @@ abstract class AtfScreensTest(private val fontScale: Float = 1f) {
     @Test fun statusKioskOn() =
         check("kiosk on", s.status(s.kiosk, s.statusState(configured = true, locked = true)).window.decorView)
 
+    /** The status screen in front of a running kiosk: Back to kiosk. */
+    @Test fun statusKioskBack() = check(
+        "back to kiosk",
+        s.status(s.kiosk, s.statusState(configured = true, locked = true, kioskSaved = true)).window.decorView,
+    )
+
+    /** A kiosk is on but lock task dropped out: the card says so, and offers Return to kiosk. */
+    @Test fun statusKioskNotLocked() = check(
+        "kiosk not locked",
+        s.status(s.kiosk, s.statusState(configured = true, kioskSaved = true)).window.decorView,
+    )
+
     @Test fun statusReturning() =
         check("returning", s.status(s.kiosk, s.statusState(configured = true, returning = true)).window.decorView)
 

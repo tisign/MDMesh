@@ -10,6 +10,7 @@ import com.mdmesh.agent.ui.StatusCopy
 import com.mdmesh.agent.ui.StatusUiState
 import com.mdmesh.core.config.ConfigApplier
 import com.mdmesh.core.config.ServerConfigStore
+import com.mdmesh.core.kiosk.KioskApplier
 import com.mdmesh.core.store.ConfigStateStore
 import com.mdmesh.core.store.DeviceIdStore
 import com.mdmesh.core.store.EnrollTokenStore
@@ -44,8 +45,9 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * The status screen's state and its one action, Return to kiosk. Lives across rotation, so a return in progress
- * keeps the button disabled ("Returning…") and its failure stays shown, where the activity alone lost both.
+ * The status screen's state and its one action, Return to kiosk (or, while a kiosk is saved, back to that one). Lives
+ * across rotation, so a return in progress keeps the button disabled ("Returning…") and its failure stays shown,
+ * where the activity alone lost both.
  *
  * Device Owner and lock-task state are system facts with no change callback: they are read again whenever the
  * kiosk or its configuration changes (as before) and when the screen resumes ([refresh]).
@@ -56,13 +58,15 @@ class StatusViewModel @Inject constructor(
     sources: StatusSources,
     private val dpmHandle: DpmHandle,
     private val configApplier: ConfigApplier,
+    private val kioskApplier: KioskApplier,
     private val events: EventLog,
 ) : ViewModel() {
 
     private val serverConfig = sources.serverConfig
     private val configStore = sources.configStore
 
-    private data class Facts(val deviceOwner: Boolean, val locked: Boolean, val configured: Boolean)
+    /** [saved]: a kiosk is saved, i.e. the agent believes the device is in one (lock task may say otherwise). */
+    private data class Facts(val deviceOwner: Boolean, val locked: Boolean, val configured: Boolean, val saved: Boolean)
 
     /** Bumped by [refresh]: the system facts are read again. */
     private val refreshes = MutableStateFlow(0)
@@ -76,9 +80,10 @@ class StatusViewModel @Inject constructor(
      * Device Owner, lock task and the configured kiosk, read again whenever the kiosk or its configuration changes
      * (entering or leaving a kiosk changes the lock-task state) and on [refresh]. Off the main thread.
      */
-    private val facts = combine(configStore.configuredKioskFlow(), sources.kioskStore.flow(), refreshes) { _, _, _ ->
-        readFacts()
-    }.flowOn(Dispatchers.Default)
+    private val facts = combine(
+        configStore.configuredKioskFlow(), sources.kioskStore.flow(), refreshes,
+    ) { _, kiosk, _ -> readFacts(saved = kiosk != null) }
+        .flowOn(Dispatchers.Default)
         .distinctUntilChanged()
         .onEach(::noteFacts)
 
@@ -103,8 +108,9 @@ class StatusViewModel @Inject constructor(
         returning,
         copied,
     ) { f, id, r, c -> stateOf(f, id, r).copy(copied = c) }
-        // The first frame is drawn from the facts read now, as before; the device id follows from storage.
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), stateOf(readFacts()))
+        // The first frame is drawn from the facts read now, as before; the device id and the saved kiosk follow from
+        // storage.
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), stateOf(readFacts(saved = false)))
 
     private fun stateOf(
         f: Facts,
@@ -121,6 +127,7 @@ class StatusViewModel @Inject constructor(
         serverUrl = serverConfig.baseUrl(),
         returning = r.running,
         returnFailure = r.failure,
+        kioskSaved = f.saved,
     ).copy(deviceId = id)
 
     /** Reads the system facts again (the screen resumed, or a kiosk change may have locked or unlocked it). */
@@ -149,17 +156,35 @@ class StatusViewModel @Inject constructor(
     }
 
     /** The kiosk Return to kiosk would enter now; null when there is none. */
-    fun configuredKiosk(): KioskApplyPayload? = configStore.configuredKiosk()
+    val configuredKiosk: KioskApplyPayload? get() = configStore.configuredKiosk()
 
     /** Enters [confirmed] (the kiosk the person confirmed); ignored while a return is already running. */
-    fun returnToKiosk(confirmed: KioskApplyPayload) {
+    fun returnToKiosk(confirmed: KioskApplyPayload) =
+        launchReturn("returned on-device") { configApplier.returnToConfiguredKiosk(expected = confirmed) }
+
+    /**
+     * Goes back to the kiosk that is saved ([com.mdmesh.agent.ui.KioskCardUi.resumes]): locked again, its launcher
+     * brought forward. Recorded, and the server told, only when lock task had dropped out from under it; going back
+     * to a kiosk the device was locked in all along changes nothing the server knows.
+     */
+    fun backToKiosk() {
+        // Read before: afterwards lock task is on either way.
+        val wasLocked = app.lockTaskOn()
+        launchReturn("locked again on-device".takeIf { !wasLocked }) { kioskApplier.showSaved() }
+    }
+
+    /**
+     * Runs [entry] unless a return is already running, and shows why it failed. [event], when given, is recorded as a
+     * `kioskReturn` once it worked, and the server is told.
+     */
+    private fun launchReturn(event: String?, entry: suspend () -> KioskResult) {
         if (returning.value.running) return
         returning.value = returning.value.started()
         viewModelScope.launch {
             try {
                 // Not cancelled with the screen: stopping mid-entry could leave a partial kiosk, HOME claimed and the
                 // allowlist set with nothing saved. The entry, its event and the check-in finish.
-                val failure = withContext(NonCancellable) { enterConfiguredKiosk(confirmed) }
+                val failure = withContext(NonCancellable) { failureOf(event, entry) }
                 returning.value = returning.value.finished(failure)
             } finally {
                 if (returning.value.running) returning.value = returning.value.finished(null)
@@ -168,18 +193,20 @@ class StatusViewModel @Inject constructor(
         }
     }
 
-    /** Enters the confirmed kiosk; null when it worked, else what to tell the person. */
-    private suspend fun enterConfiguredKiosk(confirmed: KioskApplyPayload): String? {
-        val result = runCatching { configApplier.returnToConfiguredKiosk(expected = confirmed) }.getOrElse {
+    /** Null when [entry] worked, else what to tell the person. */
+    private suspend fun failureOf(event: String?, entry: suspend () -> KioskResult): String? {
+        val result = runCatching { entry() }.getOrElse {
             if (it is CancellationException) throw it
             KioskResult.Failed(app.getString(R.string.kiosk_return_failed))
         }
         return when (result) {
             KioskResult.Ok -> {
-                events.record("kioskReturn", "returned on-device")
-                // Tell the server now, so the console shows the device in kiosk without waiting for the next
-                // heartbeat. After any check-in already running: that one may carry the state from before.
-                CheckInWorker.scheduleAfterCurrent(app)
+                if (event != null) {
+                    events.record("kioskReturn", event)
+                    // Tell the server now, so the console shows the device in kiosk without waiting for the next
+                    // heartbeat. After any check-in already running: that one may carry the state from before.
+                    CheckInWorker.scheduleAfterCurrent(app)
+                }
                 null
             }
             KioskResult.Unsupported -> app.getString(R.string.kiosk_return_unsupported)
@@ -187,14 +214,12 @@ class StatusViewModel @Inject constructor(
         }
     }
 
-    private fun readFacts(): Facts {
-        val am = app.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        return Facts(
-            deviceOwner = dpmHandle.dpm.isDeviceOwnerApp(app.packageName),
-            locked = am.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_LOCKED,
-            configured = configStore.configuredKiosk() != null,
-        )
-    }
+    private fun readFacts(saved: Boolean) = Facts(
+        deviceOwner = dpmHandle.dpm.isDeviceOwnerApp(app.packageName),
+        locked = app.lockTaskOn(),
+        configured = configStore.configuredKiosk() != null,
+        saved = saved,
+    )
 
     /** Where the status screen reads from. */
     class StatusSources @Inject constructor(
@@ -231,4 +256,10 @@ class StatusViewModel @Inject constructor(
         /** How long "Copied" shows. */
         private const val COPIED_MS = 2_000L
     }
+}
+
+/** Android's lock task is on (some task is locked): not by itself proof that the kiosk's own screen is showing. */
+private fun Context.lockTaskOn(): Boolean {
+    val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    return am.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_LOCKED
 }
