@@ -25,6 +25,8 @@ function open(configuration: Record<string, unknown> = {}) {
       return body;
     }
     if (p === `/private/configurations/${stored.id}`) return stored;
+    // A save leads back to the list, which loads after the test's last line.
+    if (p === '/private/configurations/search') return [stored];
     if (p === `/private/configurations/applications/${stored.id}`) return [];
     if (p.startsWith('/private/applications/search')) return [];
     if (p === '/private/agent/v1/configurations/syncSummary') {
