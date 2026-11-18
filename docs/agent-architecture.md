@@ -69,6 +69,19 @@ launcher), ignores Back while a kiosk is on, and pins itself again on every resu
 locks and shows the kiosk (`KioskApplier.enterShown`), never "already in this kiosk"; and while a kiosk is saved
 the status screen offers the way back to it (`KioskApplier.showSaved`), lock task on or not.
 
+**A kiosk waits for Android's setup.** A device enrolled by QR code enrolls and takes its configuration from
+`AdminPolicyComplianceActivity`, while the manufacturer's setup wizard still has steps to go. Entering the kiosk then
+would claim HOME from the wizard, and a device that can't finish setup stays half set up. So while
+`Settings.Global.DEVICE_PROVISIONED` or `Settings.Secure` `user_setup_complete` is unset (`DeviceSetupState`; a flag
+that can't be read counts as set), `KioskApplier` enters nothing: no allowlist, no HOME claim, no launcher. It saves
+the kiosk as waiting (`KioskStateStore.savePendingSetup`, apart from the kiosk state, so the launcher, the status
+screen and the server see no kiosk) and answers `failed: Waiting for Android setup to finish`; the rest of the
+document is applied. A later request replaces what waits; an exit or a kiosk-off configuration drops it, starting
+nothing. When setup completes, `SetupKioskResume` (started with the process, so also after the reboot a setup can end
+with) has `ConfigApplier.resumeKioskAfterSetup` enter it, apply the delivered document again whole, as the server's
+re-send would, and queue a check-in: the device is in sync seconds later, offline devices as soon as they connect. The
+agent never marks setup complete and never disables the wizard.
+
 **A kiosk app asks for the exit PIN.** In a single-app kiosk the launcher's exit is behind the pinned app, so the app
 can start `com.mdmesh.agent.KioskExitActivity` with action `com.mdmesh.action.REQUEST_KIOSK_EXIT`. Exported, and the
 request authorizes nothing: no extra is read, and the prompt is the launcher's (`ExitPinDialog`, `ExitPinGate` with

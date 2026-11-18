@@ -32,6 +32,7 @@ import com.mdmesh.core.command.handlers.DeviceWipeHandler
 import com.mdmesh.core.config.ConfigApplier
 import com.mdmesh.core.location.LocationModeStore
 import com.mdmesh.core.power.PowerModeStore
+import com.mdmesh.core.provisioning.DeviceSetupState
 import com.mdmesh.core.command.handlers.KioskClearPinLockoutHandler
 import com.mdmesh.core.command.handlers.KioskEnterHandler
 import com.mdmesh.core.command.handlers.KioskExitHandler
@@ -288,6 +289,7 @@ object AgentModule {
         kiosk: KioskController,
         store: KioskStateStore,
         configStore: ConfigStateStore,
+        setup: DeviceSetupState,
         @ApplicationContext context: Context,
     ): KioskApplier {
         val home = kioskHomeAlias(context)
@@ -301,9 +303,14 @@ object AgentModule {
             onEntered = { p -> KioskBackgroundPrefetchWorker.follow(context, p.theme.backgroundImage) },
             onExited = { KioskBackgroundPrefetchWorker.cancel(context) },
             bootId = { Boot.count(context) },
+            setupComplete = setup::isComplete,
             isLockTaskActive = { kiosk.isLocked(context) },
         )
     }
+
+    @Provides
+    @Singleton
+    fun provideDeviceSetupState(@ApplicationContext context: Context): DeviceSetupState = DeviceSetupState(context)
 
     @Provides @IntoSet
     fun provideKioskEnterHandler(applier: KioskApplier): CommandHandler = KioskEnterHandler(applier)

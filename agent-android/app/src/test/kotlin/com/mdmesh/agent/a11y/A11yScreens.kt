@@ -15,6 +15,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Looper
+import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -77,6 +78,9 @@ class A11yScreens {
     fun seed() {
         val dpm = app.getSystemService(DevicePolicyManager::class.java)
         shadowOf(dpm).setDeviceOwner(ComponentName(app, AdminReceiver::class.java))
+        // Android's setup is finished, as on every device in use: a kiosk doesn't wait for the wizard.
+        Settings.Global.putInt(app.contentResolver, Settings.Global.DEVICE_PROVISIONED, 1)
+        Settings.Secure.putInt(app.contentResolver, "user_setup_complete", 1)
         ServerConfigStore(app).save("https://mdm.example.com")
         runBlocking { DeviceIdStore(app).saveCredentials("dev_7f3a9c21e4b84d0e", "secret") }
         val pm = shadowOf(app.packageManager)

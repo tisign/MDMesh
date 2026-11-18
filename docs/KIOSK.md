@@ -32,6 +32,11 @@ the configuration gets the same kiosk.
 Devices apply the change at their next check-in, usually within seconds
 ([how configurations are applied](CONFIGURATIONS.md#how-a-configuration-reaches-devices)).
 
+A device enrolled by QR code gets its configuration while Android's setup wizard still has steps to go. With the
+agent after 0.5.0 the kiosk waits until the wizard has finished, then starts by itself (offline too, and after a
+restart). Until then the kiosk shows as failed with "Waiting for Android setup to finish". Earlier agents started
+the kiosk over the wizard, which could leave the device unable to finish setup.
+
 ### One app or a grid of apps
 
 You don't choose the kind of kiosk directly. It follows from the apps:
@@ -192,6 +197,7 @@ admin ends it from the console.
 | What you see | What to check |
 |---|---|
 | Kiosk doesn't start | The device page's configuration panel: the device must be in sync and Device Owner. The device's agent must support configuration sync (**Agent too old** means it doesn't). |
+| Kiosk failed with "Waiting for Android setup to finish" | The device was enrolled by QR code and its Android setup wizard is still open. Finish the wizard on the device: the kiosk then starts by itself, offline too (agent after 0.5.0). Until then the configuration shows as not applied. |
 | **Return to configured kiosk** is missing or unavailable | The hint under the **Kiosk & apps** buttons says why: for example no configuration, kiosk off in the configuration, no app set to Install and shown in kiosk, or the device is already in that kiosk. |
 | Grid instead of the main app | The main app isn't installed yet, or more than one app is shown in kiosk. Use **Install configuration apps** on the device page. |
 | Home or notifications still available | Check **Home button** and **Notifications**. A custom kiosk always allows them. |

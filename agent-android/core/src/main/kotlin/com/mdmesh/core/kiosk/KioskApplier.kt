@@ -71,6 +71,12 @@ class KioskApplier(
     private val onExited: () -> Unit = {},
     /** Which boot this is (Settings.Global.BOOT_COUNT): written into a journal entry, for the logs. */
     private val bootId: () -> Long = { 0L },
+    /**
+     * Whether Android's own setup (the setup wizard of a new device) has finished
+     * ([com.mdmesh.core.provisioning.DeviceSetupState]). Until it has, no kiosk is entered: see [waitsForSetup]. The
+     * default is for tests of everything else.
+     */
+    private val setupComplete: () -> Boolean = { true },
     /** Whether lock task is active now ([KioskController.isLocked]). Last, so a trailing lambda can only be this. */
     private val isLockTaskActive: () -> Boolean,
 ) {
@@ -109,6 +115,7 @@ class KioskApplier(
         reassert: Boolean = false,
         shown: Boolean = false,
     ): KioskResult {
+        if (waitsForSetup(p)) return KioskResult.Failed(WAITING_FOR_SETUP)
         val current = store.load()
         val pending = withContext(io) { journal.pending() }
         val same = p.sameKioskAs(current)
@@ -117,6 +124,30 @@ class KioskApplier(
             !supersede(pending, reassert || (shown && same)) -> KioskResult.Failed("kiosk exit journal not writable")
             else -> lockIn(p, current, pending)
         }
+    }
+
+    /**
+     * Android's setup wizard is still running (a device enrolled by QR code gets its configuration, kiosk included,
+     * while the wizard still has steps to go): nothing is locked and HOME isn't claimed. The kiosk launcher would
+     * take the wizard's place, and a device that can't finish setup stays half set up for good (no notifications, no
+     * Home, parts of Settings closed). [p] is kept as waiting instead and entered when setup completes
+     * ([resumeAfterSetup]); a later request replaces it, an exit drops it.
+     */
+    private suspend fun waitsForSetup(p: KioskApplyPayload): Boolean {
+        if (setupComplete()) return false
+        store.savePendingSetup(p)
+        // Read again now that it is saved: setup may have finished in between, after resumeAfterSetup looked for a
+        // waiting kiosk and found none. Then this entry goes ahead itself (and saving the kiosk drops the waiting one).
+        return !setupComplete()
+    }
+
+    /**
+     * Android's setup has finished: enter the kiosk that waited for it. Null when none did, or setup isn't complete
+     * after all. Also after a restart of the agent or the device: what waits is on disk.
+     */
+    suspend fun resumeAfterSetup(): KioskResult? = mutex.withLock {
+        if (!setupComplete()) return@withLock null
+        store.loadPendingSetup()?.let { enterLocked(it) }
     }
 
     /**
@@ -281,7 +312,18 @@ class KioskApplier(
             warn("kiosk exit refused: the kiosk it was asked for has been replaced")
             return@withLock KioskResult.Failed(EXIT_SUPERSEDED)
         }
+        if (cancelWaitingForSetup()) return@withLock KioskResult.Ok
         exitLocked(handBackHome, force, beforeSteps = beforeSteps)
+    }
+
+    /**
+     * No kiosk is on, one only waits for Android's setup: dropping it is the whole exit. Nothing was locked or
+     * claimed, so there is nothing to release, and the OEM home must not be started over the setup wizard.
+     */
+    private suspend fun cancelWaitingForSetup(): Boolean {
+        if (store.load() != null || store.loadPendingSetup() == null) return false
+        store.savePendingSetup(null)
+        return true
     }
 
     private suspend fun exitLocked(
@@ -420,8 +462,14 @@ class KioskApplier(
 
         /** [showSaved]'s reason when no kiosk is saved: nothing was entered. */
         const val NO_KIOSK = "No kiosk is running on this device."
+
+        /** An entry's reason while Android's setup is unfinished: the kiosk is kept and entered when it completes. */
+        const val WAITING_FOR_SETUP = "Waiting for Android setup to finish; the kiosk starts when it has."
     }
 
-    /** True when a kiosk payload is persisted (device believes it is / should be in kiosk). */
-    suspend fun isPersisted(): Boolean = store.load() != null
+    /**
+     * True when a kiosk payload is persisted (device believes it is / should be in kiosk), or one waits for Android's
+     * setup: a configuration that turns kiosk off must cancel that one too.
+     */
+    suspend fun isPersisted(): Boolean = store.load() != null || store.loadPendingSetup() != null
 }

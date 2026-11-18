@@ -14,6 +14,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.Looper
+import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -73,6 +74,9 @@ abstract class KioskHarness {
     @Before fun seedDevice() {
         val dpm = app.getSystemService(DevicePolicyManager::class.java)
         shadowOf(dpm).setDeviceOwner(ComponentName(app, AdminReceiver::class.java))
+        // Android's setup is finished, as on every device in use: a kiosk doesn't wait for the wizard.
+        Settings.Global.putInt(app.contentResolver, Settings.Global.DEVICE_PROVISIONED, 1)
+        Settings.Secure.putInt(app.contentResolver, "user_setup_complete", 1)
         for (pkg in listOf(pinned, other)) install(pkg)
     }
 

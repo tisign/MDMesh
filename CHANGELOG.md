@@ -29,6 +29,10 @@ Fixes
   after a kiosk was entered while that screen was open (Return to kiosk always did that). The status screen is no
   longer locked under the kiosk, Back stays on the kiosk home, and whenever a kiosk is on the status screen offers
   **Back to kiosk** (or **Return to kiosk**, if Android dropped the lock). Needs the next agent release.
+- Kiosk: on a device enrolled by QR code, a configuration's kiosk started while Android's setup wizard was still
+  open, and could leave the device unable to finish setup. The kiosk now waits for the wizard and starts by itself
+  when it is done, offline too; until then it shows as failed with "Waiting for Android setup to finish". Needs the
+  next agent release.
 
 ## v0.5.0 — 2026-11-17
 

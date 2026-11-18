@@ -18,9 +18,11 @@ import android.view.accessibility.AccessibilityNodeInfo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mdmesh.agent.admin.AdminReceiver
+import com.mdmesh.agent.provisioning.SetupKioskResume
 import com.mdmesh.core.config.ConfigApplier
 import com.mdmesh.core.kiosk.AndroidKioskHomeSwitch
 import com.mdmesh.core.kiosk.KioskApplier
+import com.mdmesh.core.provisioning.DeviceSetupState
 import com.mdmesh.core.store.DataStoreKioskStateStore
 import com.mdmesh.core.store.SharedPrefsConfigStateStore
 import com.mdmesh.core.store.configuredKiosk
@@ -34,6 +36,7 @@ import com.mdmesh.proto.KioskFeaturesDto
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -283,6 +286,51 @@ class OfflineKioskReturnTest {
             Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, pin) },
         )
     }
+
+    // --- A kiosk waits for Android's setup wizard ----------------------------------------------------------------
+
+    /**
+     * Android's setup is marked unfinished (as on a device just enrolled by QR code): the configuration's kiosk
+     * neither locks the device nor takes HOME from the wizard; it waits on disk. When setup finishes, the agent
+     * starts it by itself, offline, and the configuration counts as applied.
+     */
+    @Test
+    fun aKioskWaitsForAndroidSetupAndStartsWhenItFinishes() = runBlocking {
+        val setup = DeviceSetupState(context)
+        assertTrue("Android lets the agent read its setup flags", setup.isComplete())
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val home = ComponentName(context.packageName, "com.mdmesh.agent.KioskHomeAlias")
+        val controller = LockTaskKioskController(dpm, AdminReceiver.componentName(context))
+        val waiting = KioskApplier(
+            controller, store, AndroidKioskHomeSwitch(context, home), home, setupComplete = setup::isComplete,
+        ) { controller.isLocked(context) }
+        val waitingConfig = ConfigApplier({ ResolvedToggles(emptyMap()) }, waiting, {}, config, setPowerMode = {})
+        shell("settings put secure user_setup_complete 0")
+        try {
+            awaitCondition { !setup.isComplete() }
+            val result = waitingConfig.apply(ConfigApplyPayload(revision = "test-on", kiosk = payload))
+            assertEquals("failed: ${KioskApplier.WAITING_FOR_SETUP}", result.outcomes["kiosk"])
+            assertFalse(locked())
+            assertNull(store.load())
+            assertEquals(payload, store.loadPendingSetup())
+            assertEquals("HOME is still Android's", oemHomePackage, currentHomePackage())
+            // The watch the application starts with the process, here for this test's applier.
+            SetupKioskResume(setup, { waitingConfig }, context).start()
+            SystemClock.sleep(PROMPT_SETTLE_MS)
+            assertFalse("still waiting", locked())
+
+            shell("settings put secure user_setup_complete 1")
+            awaitCondition { locked() && store.load() == payload && node("Exit kiosk") != null }
+            assertNull(store.loadPendingSetup())
+            assertEquals("the configuration is applied, without the server", "test-on", config.revision())
+        } finally {
+            shell("settings put secure user_setup_complete 1")
+        }
+    }
+
+    private fun currentHomePackage(): String? = context.packageManager.resolveActivity(
+        Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY,
+    )?.activityInfo?.packageName
 
     private fun shell(command: String) {
         ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command)).use { it.readBytes() }

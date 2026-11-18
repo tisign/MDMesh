@@ -26,6 +26,10 @@ import kotlinx.coroutines.launch
  * where we capture both, persist them, and kick an immediate check-in so the device enrolls
  * within seconds — against the server the QR named, not the baked fallback (which in release
  * builds is a placeholder).
+ *
+ * Returning RESULT_OK from here does not end Android's setup: the manufacturer's wizard goes on. The device enrolls
+ * and takes its configuration meanwhile, but a kiosk in it waits until the wizard has finished
+ * ([com.mdmesh.core.kiosk.KioskApplier], [SetupKioskResume]).
  */
 class AdminPolicyComplianceActivity : Activity() {
 

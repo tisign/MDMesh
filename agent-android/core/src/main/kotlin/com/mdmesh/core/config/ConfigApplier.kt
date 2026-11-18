@@ -73,6 +73,23 @@ class ConfigApplier(
         kiosk.enterShown(payload)
     }
 
+    /**
+     * Android's setup has finished: enter the kiosk that waited for it ([KioskApplier.resumeAfterSetup]). The
+     * delivered document whose kiosk failed as "waiting" is then applied again whole, exactly as the server's re-send
+     * would (as [applyAfterInstall] does), so it is saved and reported in sync at the next check-in, not after the
+     * server's retry an hour later.
+     *
+     * @return the entry's result; null when no kiosk was waiting.
+     */
+    suspend fun resumeKioskAfterSetup(): KioskResult? = mutex.withLock {
+        val entered = kiosk.resumeAfterSetup() ?: return@withLock null
+        val doc = store.delivered
+        if (entered == KioskResult.Ok && doc?.kiosk != null && store.revision() != doc.revision) {
+            applyDeliveredLocked(doc)
+        }
+        entered
+    }
+
     suspend fun apply(doc: ConfigApplyPayload): ConfigApplyResult = mutex.withLock { applyDeliveredLocked(doc) }
 
     private suspend fun applyDeliveredLocked(doc: ConfigApplyPayload): ConfigApplyResult {
