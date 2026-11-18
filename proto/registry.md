@@ -62,7 +62,7 @@ advertises `tier: "none"` until the `:remote` module is implemented, so no `remo
 
 ### device
 Device actions (`DeviceAction.ADVERTISED_KEYS`). For each, the command type and the token are the same
-string, except `configApply` and `kioskClearPinLockout`.
+string, except `configApply`, `kioskClearPinLockout` and `wifiNetworks`.
 
 | key | token | command |
 |-----|-------|---------|
@@ -79,6 +79,7 @@ string, except `configApply` and `kioskClearPinLockout`.
 | `configApply` | `device.configApply` | `config.apply` |
 | `locationOff` | `device.locationOff` | `device.locationMode` with `mode: "off"` (1.4: the agent honours `off`; older agents read it as passive) |
 | `kioskClearPinLockout` | `device.kioskClearPinLockout` | `kiosk.clearPinLockout` (1.11, agent 0.5.0) |
+| `wifiNetworks` | `device.wifiNetworks` | `config.apply` with a `wifiNetworks` section (1.12): the agent saves the listed Wi-Fi networks and forgets the ones it saved that a later list drops. The server sends the section, with its passwords, only to agents that advertise this key |
 
 ## Command types
 

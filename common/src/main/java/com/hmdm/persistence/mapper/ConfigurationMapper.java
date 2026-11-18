@@ -26,6 +26,7 @@ import java.util.List;
 import com.hmdm.persistence.domain.ApplicationSetting;
 import com.hmdm.persistence.domain.ConfigurationApplicationParameters;
 import com.hmdm.persistence.domain.ConfigurationFile;
+import com.hmdm.persistence.domain.ConfigurationWifiNetwork;
 import com.hmdm.persistence.domain.ManagedAppPermission;
 import org.apache.ibatis.annotations.*;
 import com.hmdm.persistence.domain.Application;
@@ -212,6 +213,18 @@ public interface ConfigurationMapper {
 
     @Delete("DELETE FROM configurationAppPermissions WHERE configurationId=#{id}")
     void removeManagedAppPermissions(@Param("id") Integer id);
+
+    @Select("SELECT ssid, securityType, password, hidden FROM configurationWifiNetworks WHERE configurationId=#{id} ORDER BY position")
+    List<ConfigurationWifiNetwork> getWifiNetworks(@Param("id") Integer id);
+
+    /** The list index is the position, so the networks come back in the order they were sent. */
+    @Insert({"<script>INSERT INTO configurationWifiNetworks(configurationId, position, ssid, securityType, password, hidden) VALUES ",
+            "<foreach item='item' index='i' collection='networks' separator=','>",
+            "(#{id}, #{i}, #{item.ssid}, #{item.securityType}, #{item.password}, #{item.hidden})</foreach></script>"})
+    void insertWifiNetworks(@Param("id") Integer id, @Param("networks") List<ConfigurationWifiNetwork> networks);
+
+    @Delete("DELETE FROM configurationWifiNetworks WHERE configurationId=#{id}")
+    void removeWifiNetworks(@Param("id") Integer id);
 
     /**
      * <p>Gets the list of all existing applications in context of applications usage by specified configuration.</p>

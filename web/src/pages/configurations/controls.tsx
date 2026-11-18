@@ -242,8 +242,11 @@ export function AppSelect({
   );
 }
 
-/** Password field with a Show / Hide button (exit PIN). The kiosk PIN must stay readable for admins. */
-function SecretInput({
+/**
+ * Password field with a Show / Hide button (exit PIN, Wi-Fi passwords). The kiosk PIN must stay readable for admins.
+ * Named by `labelId`, or by the <Field> it sits in.
+ */
+export function SecretInput({
   labelId,
   helpId,
   value,
@@ -252,7 +255,7 @@ function SecretInput({
   pin,
   onChange,
 }: {
-  labelId: string;
+  labelId?: string;
   helpId?: string;
   value: unknown;
   disabled?: boolean;
@@ -308,12 +311,15 @@ export function FieldHelp({ text, more }: { text: string; more?: string }): Reac
   );
 }
 
-/** The agent version a setting needs, as a small tag: "Agent 0.5+" for 0.5.0. */
-export function AgentTag({ version }: { version: string }) {
+/**
+ * The agent version a setting needs, as a small tag: "Agent 0.5+" for 0.5.0. With `after`, the setting needs a release
+ * newer than `version` (one that has no number yet): "After agent 0.5.0".
+ */
+export function AgentTag({ version, after }: { version: string; after?: boolean }) {
   return (
-    <Tooltip content={`Needs agent ${version} or later. Older agents ignore it.`}>
+    <Tooltip content={after ? `Needs an agent newer than ${version}. Older agents ignore it.` : `Needs agent ${version} or later. Older agents ignore it.`}>
       <Badge tone="outline" size="xs">
-        Agent {version.replace(/\.0$/, '')}+
+        {after ? `After agent ${version}` : `Agent ${version.replace(/\.0$/, '')}+`}
       </Badge>
     </Tooltip>
   );

@@ -3236,4 +3236,21 @@
         <rollback/>
     </changeSet>
 
+    <changeSet id="26.11.18-configurationWifiNetworks" author="tisign" context="common">
+        <comment>Wi-Fi networks every device on a configuration saves (a device shared between sites knows each site's
+            network before it gets there). Separate from configurations.wifiSSID, the one setup network Android's
+            enrollment QR can carry. position keeps the console's order; the password is plain text, as
+            configurations.wifiPassword is, and NULL for an open network. No rows = no networks: an agent that
+            supports the section then forgets the ones it saved before, older agents are sent nothing.</comment>
+        <sql>CREATE TABLE configurationWifiNetworks (
+            configurationId INTEGER NOT NULL REFERENCES configurations(id) ON DELETE CASCADE,
+            position INTEGER NOT NULL,
+            ssid TEXT NOT NULL,
+            securityType VARCHAR(8) NOT NULL CHECK (securityType IN ('WPA', 'SAE', 'WEP', 'NONE')),
+            password TEXT,
+            hidden BOOLEAN NOT NULL DEFAULT FALSE,
+            PRIMARY KEY (configurationId, ssid));</sql>
+        <rollback>DROP TABLE configurationWifiNetworks;</rollback>
+    </changeSet>
+
 </databaseChangeLog>

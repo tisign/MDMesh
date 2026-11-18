@@ -54,4 +54,9 @@ public class DesiredConfig {
     private DesiredConnectivity connectivity;
     /** Null for a legacy configuration row; empty means release all managed app permission overrides. */
     private List<DesiredAppPermissions> appPermissions;
+    /**
+     * (1.12) The Wi-Fi networks the device saves. Null = not managed (the configuration's networks were not loaded, or
+     * the agent can't apply them: {@code device.wifiNetworks}); empty = forget every network saved from this section.
+     */
+    private List<DesiredWifiNetwork> wifiNetworks;
 }

@@ -36,7 +36,8 @@ function words(key: string): string {
 
 /**
  * config.apply outcome key → label: `policies.usbStorage` → "USB storage", `kiosk` → "Kiosk mode", a server plugin's
- * `policies.x.netaccess.blockTethering` → "netaccess: block tethering".
+ * `policies.x.netaccess.blockTethering` → "netaccess: block tethering", a configuration's Wi-Fi network
+ * `wifiNetworks.Depot` → "Wi-Fi network: Depot".
  */
 export function outcomeKeyLabel(key: string): string {
   if (key.startsWith('appPermissions.')) {
@@ -45,6 +46,8 @@ export function outcomeKeyLabel(key: string): string {
     if (split > 0) return `${rest.slice(0, split)}: ${words(rest.slice(split + '.android.permission.'.length)).toLowerCase()}`;
     return `App permission: ${rest}`;
   }
+  // Everything after the prefix is the network's name, whatever it holds (a name may have dots).
+  if (key.startsWith('wifiNetworks.')) return `Wi-Fi network: ${key.slice('wifiNetworks.'.length)}`;
   const k = key.startsWith('policies.') ? key.slice('policies.'.length) : key;
   if (k === 'kiosk') return 'Kiosk mode';
   if (k === 'location') return 'Location reporting';

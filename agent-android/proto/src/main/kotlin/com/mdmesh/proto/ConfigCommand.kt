@@ -24,6 +24,12 @@ data class ConfigApplyPayload(
     val connectivity: ConfigConnectivity? = null,
     /** Null = server does not manage app permissions; empty = deliberately release all earlier overrides. */
     val appPermissions: List<ConfigAppPermissions>? = null,
+    /**
+     * (1.12) The Wi-Fi networks the device keeps saved, so it joins each by itself. Null = not managed (an older
+     * server, or one that holds the section back): nothing is saved or forgotten. Empty = forget every network the
+     * agent saved from this section.
+     */
+    val wifiNetworks: List<ConfigWifiNetwork>? = null,
 )
 
 @Serializable
@@ -39,11 +45,38 @@ data class ConfigAppPermissions(
     val permissions: Map<String, String> = emptyMap(),
 )
 
+/**
+ * One Wi-Fi network of `config.apply` [ConfigApplyPayload.wifiNetworks] (1.12). A network is its name: the list has
+ * each [ssid] once, and Android itself keeps a WPA2 and a WPA3 entry of one name as a single saved network.
+ *
+ * @property security [WPA] (WPA/WPA2 personal), [SAE] (WPA3 personal), [WEP] or [NONE] (open). One this agent doesn't
+ *   know is reported `unsupported`, never saved as something else.
+ * @property password the passphrase or key; null for an open network.
+ * @property hidden the network doesn't broadcast its name.
+ */
+@Serializable
+data class ConfigWifiNetwork(
+    val ssid: String,
+    val security: String = WPA,
+    val password: String? = null,
+    val hidden: Boolean = false,
+) {
+    /** Never the password: this ends up in logs and test failures. */
+    override fun toString(): String = "ConfigWifiNetwork(ssid=$ssid, security=$security, hidden=$hidden)"
+
+    companion object {
+        const val WPA = "WPA"
+        const val SAE = "SAE"
+        const val WEP = "WEP"
+        const val NONE = "NONE"
+    }
+}
+
 /** JSON-encoded into `CommandResult.detail` (proto/payloads/config-apply-result.schema.json). */
 @Serializable
 data class ConfigApplyResult(
     val revision: String,
-    /** keys: `policies.<key>`, `kiosk`, `location`, `connectivity` → [ConfigOutcome] strings. */
+    /** keys: `policies.<key>`, `kiosk`, `location`, `connectivity`, `wifiNetworks.<ssid>` → [ConfigOutcome] strings. */
     val outcomes: Map<String, String>,
 )
 

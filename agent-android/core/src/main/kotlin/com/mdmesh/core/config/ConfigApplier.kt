@@ -11,6 +11,8 @@ import com.mdmesh.policy.AppRuntimePermissions
 import com.mdmesh.policy.AppPermissionOutcome
 import com.mdmesh.policy.UnsupportedAppRuntimePermissions
 import com.mdmesh.policy.safeboot.SafeBootPolicy
+import com.mdmesh.policy.wifi.UnsupportedWifiNetworks
+import com.mdmesh.policy.wifi.WifiNetworks
 import com.mdmesh.policy.wifi.WifiRadioPolicy
 import com.mdmesh.proto.ConfigApplyPayload
 import com.mdmesh.proto.ConfigApplyResult
@@ -38,8 +40,10 @@ import kotlinx.coroutines.sync.withLock
  *   never unsupported, so the document is not saved and the server re-sends it; it is never applied or released.
  * @param setPowerMode sets the live-connection mode for the `connectivity` section (1.5), as `device.powerMode` does.
  *   Only called with a mode this agent knows; another one is reported unsupported.
+ * @param wifiNetworks saves and forgets the Wi-Fi networks of the `wifiNetworks` section (1.12).
  */
-@Suppress("TooManyFunctions") // Coordinator for independently releasable desired-state sections.
+// Coordinator for independently releasable desired-state sections: one collaborator per section it applies.
+@Suppress("TooManyFunctions", "LongParameterList")
 class ConfigApplier(
     private val toggles: () -> ResolvedToggles,
     private val kiosk: KioskApplier,
@@ -47,8 +51,10 @@ class ConfigApplier(
     private val store: ConfigStateStore,
     private val setPowerMode: (String) -> Unit,
     private val appPermissions: AppRuntimePermissions = UnsupportedAppRuntimePermissions,
+    wifiNetworks: WifiNetworks = UnsupportedWifiNetworks,
 ) {
     private val mutex = Mutex()
+    private val wifiNetworksSection = WifiNetworksSection(wifiNetworks, store)
 
     /**
      * Staff can restore the assigned kiosk locally, including offline. Read the current document under the same
@@ -183,6 +189,8 @@ class ConfigApplier(
             }
         }
         applyAppPermissions(doc, previous, unreleased, outcomes)
+        // A boot re-apply (not persisted) saves again and forgets nothing: see WifiNetworksSection.
+        wifiNetworksSection.apply(doc.wifiNetworks, bootReapply = !persist, outcomes)
         val result = ConfigApplyResult(doc.revision, outcomes)
         if (persist && succeeded(result)) store.save(doc)
         return result

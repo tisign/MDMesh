@@ -321,3 +321,81 @@
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
 }
+
+/* Wi-Fi networks (Network): a row of fields per network, which wrap under each other when narrow */
+.v2 .v2-cfged-wifi__help,
+.v2 .v2-cfged-wifi__empty,
+.v2 .v2-cfged-wifi__limit,
+.v2 .v2-cfged-note {
+  font-size: var(--text-meta);
+  line-height: var(--lh-meta);
+  color: var(--secondary);
+}
+.v2 .v2-cfged-wifi__help {
+  max-width: 80ch;
+  margin: 0;
+  padding-bottom: var(--space-3);
+}
+.v2 .v2-cfged-wifi__empty,
+.v2 .v2-cfged-wifi__row,
+.v2 .v2-cfged-wifi__add {
+  padding: var(--space-3) 0;
+  border-top: var(--hairline) solid var(--line-soft);
+}
+.v2 .v2-cfged-wifi__empty {
+  margin: 0;
+}
+.v2 .v2-cfged-wifi__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2) var(--space-3);
+}
+/* name, security and password on a line (wrapping when narrow), then the row's options under them */
+.v2 .v2-cfged-wifi__fields {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.v2 .v2-cfged-wifi__name {
+  flex: 1 1 200px;
+}
+.v2 .v2-cfged-wifi__security {
+  flex: 0 0 140px;
+}
+/* Show / Hide at the height of the fields beside it */
+.v2 .v2-cfged-wifi__fields .v2-cfged-secret__btn {
+  height: var(--control-sm);
+}
+.v2 .v2-cfged-wifi__more {
+  flex: 1 1 100%;
+}
+/* Remove, level with the first line's controls: under the height of a field's label and its gap */
+.v2 .v2-cfged-wifi__rm {
+  flex: 0 0 auto;
+  margin-top: calc(var(--lh-ui) + var(--space-2));
+}
+/* what stops the save, under the row it is about */
+.v2 .v2-cfged-wifi__error {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: var(--text-meta);
+  line-height: var(--lh-meta);
+  color: var(--alert-ink);
+}
+.v2 .v2-cfged-wifi__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+/* A quiet note under a section's rows (Enrollment: what the QR code can carry) */
+.v2 .v2-cfged-note {
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-top: var(--hairline) solid var(--line-soft);
+}

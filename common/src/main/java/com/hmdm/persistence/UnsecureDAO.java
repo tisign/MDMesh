@@ -304,6 +304,11 @@ public class UnsecureDAO {
         return this.configurationMapper.getManagedAppPermissions(configurationId);
     }
 
+    /** The Wi-Fi networks the configuration's devices save, in the console's order; empty when it has none. */
+    public List<ConfigurationWifiNetwork> getWifiNetworks(Integer configurationId) {
+        return this.configurationMapper.getWifiNetworks(configurationId);
+    }
+
     @Transactional
     public Configuration getConfigurationByIdWithAppSettings(Integer id) {
         final Configuration dbConfiguration = this.configurationMapper.getConfigurationById(id);

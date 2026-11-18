@@ -19,6 +19,25 @@ describe('saveConfiguration', () => {
     expect(sent(fetch)).toEqual({ id: 3, name: 'Warehouse', applications: [], kioskMode: false });
   });
 
+  it('sends the Wi-Fi networks as given, passwords untouched, and none when the configuration came without the list', async () => {
+    const fetch = stubApi(() => ({ id: 3, name: 'Warehouse' }));
+    const wifiNetworks = [
+      { ssid: ' Depot ', securityType: 'WPA' as const, password: ' pass word ', hidden: true },
+      { ssid: 'Guest', securityType: 'NONE' as const, password: null },
+    ];
+    await saveConfiguration({ id: 3, name: 'Warehouse', applications: [], wifiNetworks });
+    expect(sent(fetch).wifiNetworks).toEqual(wifiNetworks);
+
+    fetch.mockClear();
+    await saveConfiguration({ id: 3, name: 'Warehouse', applications: [], wifiNetworks: [] });
+    expect(sent(fetch).wifiNetworks).toEqual([]);
+
+    // A server from before the list: nothing loaded, nothing sent, so a newer server keeps what it has stored.
+    fetch.mockClear();
+    await saveConfiguration({ id: 3, name: 'Warehouse', applications: [] });
+    expect(sent(fetch)).not.toHaveProperty('wifiNetworks');
+  });
+
   it('keeps a template’s extensions in the new configuration made from it, as a copy does', async () => {
     const fetch = stubApi(() => ({ id: 4, name: 'Warehouse copy' }));
     const template = { id: 3, name: 'Warehouse', qrCodeKey: 'k', applications: [], extensions: { demo: { on: true } } };

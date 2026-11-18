@@ -81,7 +81,10 @@ import com.mdmesh.oem.OemAdapter
 import com.mdmesh.policy.CapabilityRegistry
 import com.mdmesh.policy.AppRuntimePermissions
 import com.mdmesh.policy.DeviceOwnerAppRuntimePermissions
+import com.mdmesh.policy.wifi.AndroidSavedWifi
 import com.mdmesh.policy.wifi.AndroidWifiRadio
+import com.mdmesh.policy.wifi.DeviceOwnerWifiNetworks
+import com.mdmesh.policy.wifi.WifiNetworks
 import com.mdmesh.policy.wifi.DpmHandle
 import com.mdmesh.policy.wifi.SharedPrefsWifiRadioOffState
 import com.mdmesh.remote.RemoteControlTierDetector
@@ -384,8 +387,18 @@ object AgentModule {
         store: ConfigStateStore,
         power: PowerModeStore,
         appPermissions: AppRuntimePermissions,
+        wifiNetworks: WifiNetworks,
     ): ConfigApplier = ConfigApplier(registry::togglePolicies, kiosk, location::set, store,
-        setPowerMode = power::set, appPermissions = appPermissions)
+        setPowerMode = power::set, appPermissions = appPermissions, wifiNetworks = wifiNetworks)
+
+    /** Device Owner is asked each time, not once: it becomes true partway through QR provisioning (#76). */
+    @Provides
+    @Singleton
+    fun provideWifiNetworks(@ApplicationContext context: Context, handle: DpmHandle): WifiNetworks =
+        DeviceOwnerWifiNetworks(
+            AndroidSavedWifi.from(context),
+            isDeviceOwner = { handle.dpm.isDeviceOwnerApp(handle.admin.packageName) },
+        )
 
     @Provides
     @Singleton

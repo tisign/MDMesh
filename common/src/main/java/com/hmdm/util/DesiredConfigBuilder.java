@@ -14,6 +14,8 @@ import com.hmdm.rest.json.agent.DesiredKioskFeatures;
 import com.hmdm.rest.json.agent.DesiredKioskTheme;
 import com.hmdm.rest.json.agent.DesiredLocation;
 import com.hmdm.rest.json.agent.DesiredAppPermissions;
+import com.hmdm.rest.json.agent.DesiredWifiNetwork;
+import com.hmdm.persistence.domain.ConfigurationWifiNetwork;
 import com.hmdm.persistence.domain.ManagedAppPermission;
 
 import java.nio.charset.StandardCharsets;
@@ -44,6 +46,8 @@ public final class DesiredConfigBuilder {
     public static final String CAPABILITY = "device.configApply";
     /** Agent support token for the optional per-app runtime permission document section. */
     public static final String APP_PERMISSIONS_CAPABILITY = "app.runtimePermissions";
+    /** Agent support token for the optional Wi-Fi networks document section (protocol 1.12). */
+    public static final String WIFI_NETWORKS_CAPABILITY = "device.wifiNetworks";
     public static final String POLICY_PREFIX = "policies.";
     public static final String KEY_KIOSK = "kiosk";
     public static final String KEY_LOCATION = "location";
@@ -83,6 +87,7 @@ public final class DesiredConfigBuilder {
             d.setConnectivity(c);
         }
         d.setAppPermissions(appPermissions(cfg, appList));
+        d.setWifiNetworks(wifiNetworks(cfg));
         // Last, once core's sections are built from cfg, so a contributor can't change them.
         contribute(policies, cfg, Collections.unmodifiableList(appList), contributors);
         d.setRevision(revision(d));
@@ -108,6 +113,28 @@ public final class DesiredConfigBuilder {
             value.setPackageName(entry.getKey()); value.setPermissions(entry.getValue()); result.add(value);
         }
         return result;
+    }
+
+    /**
+     * The configuration's Wi-Fi networks as the agent saves them, or null when they were not loaded (not managed).
+     * Sorted by SSID: the order in the console is for people, Android picks a network by signal, so moving a row must
+     * not change the revision and re-send the document to every device. A row the save's checks would refuse (written
+     * past them) is left out rather than sent to fail on every device.
+     */
+    private static List<DesiredWifiNetwork> wifiNetworks(Configuration cfg) {
+        if (cfg.getWifiNetworks() == null) return null;
+        Map<String, DesiredWifiNetwork> bySsid = new TreeMap<String, DesiredWifiNetwork>();
+        for (ConfigurationWifiNetwork n : cfg.getWifiNetworks()) {
+            if (n == null || WifiNetworkRules.problem(n) != null) continue;
+            DesiredWifiNetwork d = new DesiredWifiNetwork();
+            d.setSsid(n.getSsid());
+            d.setSecurity(n.getSecurityType());
+            d.setPassword(ConfigurationWifiNetwork.SECURITY_NONE.equals(n.getSecurityType()) ? null : n.getPassword());
+            // Only when true: null is dropped from the canonical JSON.
+            d.setHidden(n.isHidden() ? Boolean.TRUE : null);
+            bySsid.put(n.getSsid(), d);
+        }
+        return new ArrayList<DesiredWifiNetwork>(bySsid.values());
     }
 
     /**

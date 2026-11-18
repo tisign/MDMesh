@@ -65,6 +65,8 @@ public class AgentCheckInConfigResyncTest {
         @Override public List<ManagedAppPermission> getManagedAppPermissions(Integer configurationId) {
             return Collections.emptyList();
         }
+        /** Not loaded: the document has no wifiNetworks section, as before 1.12. */
+        @Override public java.util.List<com.hmdm.persistence.domain.ConfigurationWifiNetwork> getWifiNetworks(Integer id) { return null; }
     }
 
     /** In-memory agentCommand + device_state with the production upsert/claim semantics. */

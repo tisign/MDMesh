@@ -69,7 +69,7 @@ launcher), ignores Back while a kiosk is on, and pins itself again on every resu
 locks and shows the kiosk (`KioskApplier.enterShown`), never "already in this kiosk"; and while a kiosk is saved
 the status screen offers the way back to it (`KioskApplier.showSaved`), lock task on or not.
 
-**The 26 enforced fields**
+**The 27 enforced fields**
 
 | Area | Fields |
 |------|--------|
@@ -79,6 +79,7 @@ the status screen offers the way back to it (`KioskApplier.showSaved`), lock tas
 | Location | `requestUpdates` (location capture mode) |
 | Connectivity | `connectivityMode` (live-connection mode, 1.5) |
 | App permissions | `managedAppPermissions` (per installed app: Grant or Deny a runtime permission, 1.7) |
+| Wi-Fi networks | `wifiNetworks` (the networks every device saves: name, security, password, hidden; 1.12) |
 
 **Kiosk colours on the device** (agent 0.5.0+, `KioskPalette`). A colour is `#RRGGBB`, `#AARRGGBB` or one of
 Android's colour names (any case, nothing around it), read the same way in the console's preview and on the device
@@ -125,6 +126,19 @@ agents use both colours as sent.
   agent applies its rules as soon as its `app.install` succeeds, also after an update. Only agents that advertise
   `app.runtimePermissions` get the section; the others get the document without it, under that document's revision,
   and show as out of sync while the configuration has a rule.
+- **1.12:** the `wifiNetworks` section: the Wi-Fi networks the device keeps saved (`ssid`, `security`, `password`,
+  `hidden`), for devices that move between sites. The agent saves them as Device Owner (`WifiManager.addNetwork`,
+  which Device Owners keep past its API 29 deprecation) and remembers what it saved
+  (`ConfigStateStore.managedWifiNetworks`): Android lists saved networks only to callers with location access, so
+  the agent never reads them back. A network already saved exactly so isn't touched again (a re-sent document can't
+  interrupt the connection in use); after a boot every network is saved again. A network a later list drops is
+  forgotten, an empty list forgets them all, an absent section (an older server) leaves them. Forgetting is
+  `deferred` while the network is the device's only connection, or Android won't say which network the device is on
+  and it has no other internet: a device cut off that way couldn't be told to save it again. Networks the agent
+  didn't save (the setup Wi-Fi from the QR code, ones typed in on the device) are never forgotten. WPA3 (`SAE`)
+  needs Android 11. Only agents that advertise `device.wifiNetworks` get the section, passwords included; the
+  others get the document without it, under that document's revision, and show as out of sync while the
+  configuration has networks.
 
 **Kiosk background image.** A configuration's managed image is an uploaded file (`backgroundImageFileId`). On
 save the server refuses anything but a PNG, JPEG or WebP of at most 10 MB and 16 megapixels (read from the header),

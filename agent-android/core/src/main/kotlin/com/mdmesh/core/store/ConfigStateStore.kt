@@ -3,6 +3,7 @@ package com.mdmesh.core.store
 import android.content.Context
 import android.content.SharedPreferences
 import com.mdmesh.proto.ConfigApplyPayload
+import com.mdmesh.proto.ConfigWifiNetwork
 import com.mdmesh.proto.ConfigAppPermissions
 import com.mdmesh.proto.KioskApplyPayload
 import com.mdmesh.proto.ProtocolJson
@@ -44,6 +45,13 @@ interface ConfigStateStore {
     var unreleased: Set<String>
     /** Active app-permission rules survive documents from an older server that omit the optional section. */
     var activeAppPermissions: List<ConfigAppPermissions>
+
+    /**
+     * The Wi-Fi networks the agent saved on the device from `config.apply` wifiNetworks, each as it was last saved
+     * (its password too: forgetting one means finding it again). Also those it has not managed to forget yet. Kept
+     * apart from the documents: one without the section (an older server) must not make them look unmanaged.
+     */
+    var managedWifiNetworks: List<ConfigWifiNetwork>
 
     /**
      * The revision for which a Wi-Fi radio self-heal hold was last ended (a changed configuration ends it). Kept apart
@@ -90,6 +98,7 @@ class SharedPrefsConfigStateStore(context: Context) : ConfigStateStore {
             .remove(KEY_DELIVERED)
             .remove(KEY_UNRELEASED)
             .remove(KEY_APP_PERMISSIONS)
+            .remove(KEY_WIFI_NETWORKS)
             .remove(KEY_HOLD_ENDED)
             .apply()
     }
@@ -106,6 +115,12 @@ class SharedPrefsConfigStateStore(context: Context) : ConfigStateStore {
             val state = ConfigApplyPayload(revision = "", appPermissions = v)
             prefs.edit().putString(KEY_APP_PERMISSIONS, ConfigStateCodec.encode(state)).commit()
         }
+    override var managedWifiNetworks: List<ConfigWifiNetwork>
+        get() = ConfigStateCodec.decode(prefs.getString(KEY_WIFI_NETWORKS, null))?.wifiNetworks.orEmpty()
+        set(v) {
+            val state = ConfigApplyPayload(revision = "", wifiNetworks = v)
+            prefs.edit().putString(KEY_WIFI_NETWORKS, ConfigStateCodec.encode(state)).commit()
+        }
     override var holdEndedFor: String?
         get() = prefs.getString(KEY_HOLD_ENDED, null)
         set(v) { prefs.edit().putString(KEY_HOLD_ENDED, v).commit() }
@@ -113,6 +128,7 @@ class SharedPrefsConfigStateStore(context: Context) : ConfigStateStore {
         const val KEY_DOC = "doc"; const val KEY_REV = "revision"; const val KEY_DELIVERED = "deliveredDoc"
         const val KEY_UNRELEASED = "unreleased"
         const val KEY_APP_PERMISSIONS = "appPermissions"
+        const val KEY_WIFI_NETWORKS = "wifiNetworks"
         const val KEY_HOLD_ENDED = "holdEndedFor"
     }
 }
@@ -133,6 +149,7 @@ class InMemoryConfigStateStore : ConfigStateStore {
         delivered = null
         unreleased = emptySet()
         activeAppPermissions = emptyList()
+        managedWifiNetworks = emptyList()
         holdEndedFor = null
         configuredKioskState.value = configuredKiosk()
     }
@@ -141,5 +158,6 @@ class InMemoryConfigStateStore : ConfigStateStore {
         set(value) { field = value; configuredKioskState.value = configuredKiosk() }
     override var unreleased: Set<String> = emptySet()
     override var activeAppPermissions: List<ConfigAppPermissions> = emptyList()
+    override var managedWifiNetworks: List<ConfigWifiNetwork> = emptyList()
     override var holdEndedFor: String? = null
 }

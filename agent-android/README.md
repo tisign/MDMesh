@@ -109,6 +109,10 @@ classes it uses. The tests skip unless running on an offline Device Owner Androi
 saved/delivered configuration. It also covers Back on the kiosk HOME after a kiosk was entered with the status screen
 open, and the status screen's Back to kiosk.
 
+`com.mdmesh.agent.policy.WifiNetworksDeviceTest` runs the same way (Wi-Fi on or off, Android 12 or later): it saves,
+updates and forgets Wi-Fi networks through Android's real Wi-Fi service, the part of `config.apply` wifiNetworks the
+JVM tests can only fake. It touches only networks named `mdmesh-test-…` and removes them.
+
 ### Getting OFF Device Owner (dev cycle)
 
 A Device Owner cannot simply be uninstalled. To clear it:

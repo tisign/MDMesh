@@ -44,6 +44,8 @@ public class ConfigReconcilerBackgroundUrlTest {
             return Collections.emptyList();
         }
         @Override public List<ManagedAppPermission> getManagedAppPermissions(Integer id) { return null; }
+        /** Not loaded: the document has no wifiNetworks section, as before 1.12. */
+        @Override public java.util.List<com.hmdm.persistence.domain.ConfigurationWifiNetwork> getWifiNetworks(Integer id) { return null; }
         @Override public UploadedFile getUploadedFileById(Integer id) {
             fileReads++;
             return file != null && id.equals(file.getId()) ? file : null;

@@ -58,7 +58,7 @@ Most of these settings have three states:
 
 | Section | Settings |
 |---------|----------|
-| Network | **Wi-Fi settings**, **Wi-Fi radio** (agent 0.3.4), **Location services** (agent 0.5.0, Android 11 or later), **Bluetooth**, **Location reporting**, **Connectivity** (agent 0.4.0) |
+| Network | **Wi-Fi settings**, **Wi-Fi radio** (agent 0.3.4), **Location services** (agent 0.5.0, Android 11 or later), **Bluetooth**, **Location reporting**, **Connectivity** (agent 0.4.0), **Wi-Fi networks** (agent after 0.5.0, [below](#wi-fi-networks)) |
 | Security | **Camera**, **USB storage**, **Screenshots**, **Factory reset**, **Safe Mode** |
 
 **Not managed doesn't undo a block.** Switching a setting from Block to Not managed leaves the device as it is,
@@ -73,11 +73,31 @@ blocked included. To lift a block, set the setting to **Allow**. The exceptions:
 **Connectivity** (Battery-saver, Always-on, or **—** for not managed) sets how the device keeps its live connection
 to the server. Each setting's help text in the console explains the details.
 
+#### Wi-Fi networks
+
+**Wi-Fi networks** (agent after 0.5.0) is a list of networks every device on the configuration saves: name (SSID),
+security (Open, WPA/WPA2, WPA3 or WEP), password, and whether the network hides its name. Use it for devices that
+move between sites: list each site's network once, and a device joins it by itself when it gets there.
+
+- A device gets the list with its configuration, so a new device has it seconds after it enrolls, while it is still
+  on the setup Wi-Fi from the QR code. The QR code itself can carry only one network: that is the
+  [setup Wi-Fi](#enrollment).
+- Passwords are stored and sent to devices in plain text, like the setup Wi-Fi password.
+- **Changing a password:** change it here first, then on the access point. Devices on that network get the new
+  password while they are still connected, and reconnect once the access point has it. The other way round, they
+  are cut off before they can learn it.
+- **Removing a network** makes devices forget it. A device whose only connection is that network keeps it until it
+  is online another way (its result says Deferred), so removing the wrong row can't cut a site's devices off for
+  good. MDMesh only forgets networks it saved: the setup Wi-Fi and networks typed in on the device stay.
+- WPA3 needs Android 11 or later; an older device reports that network Not supported and saves the others.
+- A device on an older agent ignores the list and shows as out of sync while the configuration has networks.
+
 ### Enrollment
 
 **Setup Wi-Fi name (SSID)**, **Setup Wi-Fi password** and **Setup Wi-Fi security** are not sent to devices. The
 **Enroll** page can put this Wi-Fi network in the enrollment QR code, so a new device joins it during setup. The
-password is in the QR code in plain text.
+password is in the QR code in plain text. Android's QR code takes one network only; for the networks of your other
+sites, use [Wi-Fi networks](#wi-fi-networks) in the Network section.
 
 ### Legacy launcher settings
 

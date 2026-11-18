@@ -2,6 +2,7 @@ package com.mdmesh.proto
 
 import kotlinx.serialization.encodeToString
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -71,6 +72,35 @@ class ConfigCommandTest {
                 """{"revision":"r","appPermissions":[]}""",
             ).appPermissions,
         )
-        assertEquals("1.11", ProtocolJson.PROTOCOL_VERSION)
+        assertEquals("1.12", ProtocolJson.PROTOCOL_VERSION)
+    }
+
+    @Test
+    fun `wifi networks distinguish an old server omission from an explicit empty list (protocol 1_12)`() {
+        val json = """{"revision":"r","wifiNetworks":[""" +
+            """{"ssid":"Depot","security":"SAE","password":"secret-9","hidden":true},""" +
+            """{"ssid":"Lobby","security":"NONE"},{"ssid":"Yard","password":"password1","band":"6GHz"}]}"""
+        val networks = ProtocolJson.json.decodeFromString(ConfigApplyPayload.serializer(), json).wifiNetworks
+        assertEquals(
+            listOf(
+                ConfigWifiNetwork("Depot", ConfigWifiNetwork.SAE, "secret-9", hidden = true),
+                ConfigWifiNetwork("Lobby", ConfigWifiNetwork.NONE),
+                // Security defaults to WPA; a field from a newer server is ignored.
+                ConfigWifiNetwork("Yard", ConfigWifiNetwork.WPA, "password1"),
+            ),
+            networks,
+        )
+        fun networksOf(doc: String) =
+            ProtocolJson.json.decodeFromString(ConfigApplyPayload.serializer(), doc).wifiNetworks
+        assertNull(networksOf("""{"revision":"r"}"""))
+        assertEquals(emptyList<ConfigWifiNetwork>(), networksOf("""{"revision":"r","wifiNetworks":[]}"""))
+        assertTrue(DeviceAction.ADVERTISED_KEYS.contains(DeviceAction.WIFI_NETWORKS_KEY))
+    }
+
+    @Test
+    fun `a wifi network never prints its password`() {
+        val depot = ConfigWifiNetwork("Depot", ConfigWifiNetwork.WPA, "hunter2-secret")
+        assertFalse(depot.toString().contains("hunter2"))
+        assertFalse(ConfigApplyPayload(revision = "r", wifiNetworks = listOf(depot)).toString().contains("hunter2"))
     }
 }

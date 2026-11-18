@@ -7,6 +7,7 @@ import {
   saveConfiguration,
   type ConfigApp,
   type Configuration,
+  type WifiNetwork,
 } from '../api/configurations';
 import { ApiError } from '../api/client';
 import { commitUpload, listApplications, uploadRawFile, type Application } from '../api/applications';
@@ -40,6 +41,7 @@ import {
 import { configuredKiosk } from '../data/kiosk';
 import { kioskAffectingChanges } from '../data/kioskChanges';
 import { manageableAppPermissions, managedAppPermissionLabel } from '../data/managedAppPermissions';
+import { wifiNetworkProblems, wifiNetworksSignature, type WifiNetworkProblem } from '../data/wifiNetworks';
 import {
   Badge,
   Breadcrumb,
@@ -80,6 +82,7 @@ import { NoAccess } from '../ext/hosts/RoutePage';
 import { usePermission } from '../ext/permissions';
 import { paths } from '../routes';
 import { AssignedApps } from './configurations/AssignedApps';
+import { WifiNetworks } from './configurations/WifiNetworks';
 import { KioskBackgroundField, hostedPath, useKioskBackgroundInfo } from './configurations/KioskBackground';
 import { KioskBackgroundPreview } from './configurations/KioskPreview';
 import { kioskColours, type FitMode } from '../data/kioskScrim';
@@ -335,10 +338,15 @@ function changedKeys(before: Configuration, after: Configuration): Set<string> {
     || norm(before.backgroundImageFocalY) !== norm(after.backgroundImageFocalY)) out.add('backgroundImageFileId');
   if (appsSignature(before) !== appsSignature(after)) out.add('applications');
   if (appPermissionsSignature(before) !== appPermissionsSignature(after)) out.add('managedAppPermissions');
+  // In its order, which is the saved order: a network moved is a change.
+  if (wifiNetworksSignature(before.wifiNetworks) !== wifiNetworksSignature(after.wifiNetworks)) out.add('wifiNetworks');
   return out;
 }
 
 const changedLabel = (n: number) => (n > 0 ? `${n} changed` : '');
+
+const NO_WIFI_NETWORKS: readonly WifiNetwork[] = [];
+const NO_WIFI_PROBLEMS: readonly WifiNetworkProblem[] = [];
 
 /** Save-bar sentence for a configuration devices use: agents too old for config.apply never pick a change up. */
 function syncMessage(row: ConfigSyncSummary): string {
@@ -400,6 +408,8 @@ function Editor({
   const mayAdd = usePermission(CORE_ACTION_ACCESS.addConfig);
   const canSave = mayEdit && (!isNew || mayAdd);
   const [nameError, setNameError] = useState<string | null>(null);
+  // A save was stopped at the Wi-Fi networks: from then on a row says what it still lacks, too.
+  const [wifiChecked, setWifiChecked] = useState(false);
   const [advanced, setAdvanced] = useState(false);
   // Discards so far: the apps table files its rows again by their restored state.
   const [discards, setDiscards] = useState(0);
@@ -459,6 +469,16 @@ function Editor({
   const pinProblem = readOnly ? null : exitPinProblem(draft.password, isNew ? null : baseline.password);
   const legacyPin = !pinProblem && hasLegacyPin(draft);
 
+  const wifiNetworks = draft.wifiNetworks ?? NO_WIFI_NETWORKS;
+  const setWifiNetworks = (next: WifiNetwork[]) =>
+    // A list emptied again that the server never sent (one from before the list) goes back to not being sent.
+    set('wifiNetworks', next.length === 0 && baseline.wifiNetworks == null ? baseline.wifiNetworks : next);
+  // Only an edited list is checked: the saved one goes back as the server stored it.
+  const wifiEdited = changed.has('wifiNetworks') && !readOnly;
+  const wifiProblems = useMemo(() => (wifiEdited ? wifiNetworkProblems(wifiNetworks) : NO_WIFI_PROBLEMS), [wifiEdited, wifiNetworks]);
+  // While a new row is being filled in, only what is wrong with it shows, not what is still empty.
+  const wifiShown = wifiChecked ? wifiProblems : wifiProblems.filter((p) => !p.missing);
+
   const deviceCount = isNew ? 0 : affectedDeviceCount(syncRow);
   const kioskKeys = isNew ? [] : kioskAffectingChanges(baseline, draft);
 
@@ -468,6 +488,7 @@ function Editor({
     for (const k of changed) {
       if (k === 'applications') n += sec === 'apps' ? 1 : 0;
       else if (k === 'backgroundImageFileId') n += sec === 'kiosk' ? 1 : 0;
+      else if (k === 'wifiNetworks') n += sec === 'network' ? 1 : 0;
       else if (FIELD[k] && sectionOf(FIELD[k]) === sec) n++;
     }
     return readOnly ? 0 : n;
@@ -492,7 +513,7 @@ function Editor({
                 : '',
       metaTone: pinProblem ? 'alert' : !kioskChanged && (defaultPin || noPin || legacyPin) ? 'warn' : 'default',
     },
-    network: { meta: changedLabel(changedIn('network')) },
+    network: wifiShown.length > 0 ? { meta: 'Check Wi-Fi', metaTone: 'alert' } : { meta: changedLabel(changedIn('network')) },
     security: { meta: changedLabel(changedIn('security')) },
     enrollment: { meta: changedLabel(changedIn('enrollment')) },
     headwind: { meta: hwChanged ? changedLabel(hwChanged) : String(LEGACY_FIELDS.length) },
@@ -571,6 +592,15 @@ function Editor({
       document.querySelector<HTMLInputElement>(`[aria-labelledby="${ids}-password"]`)?.focus({ preventScroll: true });
       return;
     }
+    if (wifiProblems.length > 0) {
+      const first = wifiProblems[0];
+      setWifiChecked(true);
+      toast.push('err', 'Check the Wi-Fi networks', `Network ${first.index + 1}: ${first.message}`);
+      focusSection('network');
+      // The list is the end of a long card: the row's own field scrolls into view when it takes the focus.
+      document.getElementById(`${ids}-wifi-${first.index}-${first.field ?? 'ssid'}`)?.focus();
+      return;
+    }
     const invalid = host.validate();
     if (invalid) {
       toast.push('err', `Fix ${plural(invalid.problems, 'problem')} before saving`, `${invalid.title}: ${invalid.message}`);
@@ -619,6 +649,7 @@ function Editor({
     setDraft(baseline);
     setDiscards((n) => n + 1);
     setNameError(null);
+    setWifiChecked(false);
     host.reset();
   }
 
@@ -848,6 +879,23 @@ function Editor({
       {renderItems(LAYOUT[id])}
       {id === 'kiosk' ? backgroundImageRow : null}
       {id === 'kiosk' ? gallery : null}
+      {id === 'network' ? (
+        <WifiNetworks
+          key={discards}
+          networks={wifiNetworks}
+          onChange={setWifiNetworks}
+          readOnly={readOnly}
+          changed={changed.has('wifiNetworks')}
+          problems={wifiShown}
+          idBase={`${ids}-wifi`}
+        />
+      ) : null}
+      {id === 'enrollment' ? (
+        <p className="v2-cfged-note">
+          The QR code can carry only this one network. The networks under Network → Wi-Fi networks reach a device right
+          after it enrolls.
+        </p>
+      ) : null}
     </Card>
   );
 

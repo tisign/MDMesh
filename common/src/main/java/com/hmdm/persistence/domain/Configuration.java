@@ -250,6 +250,12 @@ public class Configuration implements CustomerData, Serializable {
     /** Explicit managed runtime permissions. Null on an update preserves rules for older console clients. */
     private List<ManagedAppPermission> managedAppPermissions;
 
+    /**
+     * Wi-Fi networks every device on this configuration saves, in the order the console shows them. Null on an update
+     * keeps what is stored (an older console client); an empty list makes devices forget the ones saved before.
+     */
+    private List<ConfigurationWifiNetwork> wifiNetworks;
+
     @ApiModelProperty("A list of files to be used on devices")
     private List<ConfigurationFile> files;
 
@@ -769,6 +775,9 @@ public class Configuration implements CustomerData, Serializable {
     public List<ManagedAppPermission> getManagedAppPermissions() { return managedAppPermissions; }
     public void setManagedAppPermissions(List<ManagedAppPermission> managedAppPermissions) { this.managedAppPermissions = managedAppPermissions; }
 
+    public List<ConfigurationWifiNetwork> getWifiNetworks() { return wifiNetworks; }
+    public void setWifiNetworks(List<ConfigurationWifiNetwork> wifiNetworks) { this.wifiNetworks = wifiNetworks; }
+
     public List<ConfigurationApplicationParameters> getApplicationUsageParameters() {
         return applicationUsageParameters;
     }
@@ -1074,6 +1083,9 @@ public class Configuration implements CustomerData, Serializable {
         // Same applications, so the same app ids: a copy keeps the app permission rules.
         copy.setManagedAppPermissions(getManagedAppPermissions() == null ? null
                 : new java.util.ArrayList<ManagedAppPermission>(getManagedAppPermissions()));
+        // A copy is for the same sites: it keeps their networks.
+        copy.setWifiNetworks(getWifiNetworks() == null ? null
+                : new java.util.ArrayList<ConfigurationWifiNetwork>(getWifiNetworks()));
         copy.setApplicationUsageParameters(getApplicationUsageParameters());
         copy.setFiles(getFiles());
         copy.setPassword(getPassword());

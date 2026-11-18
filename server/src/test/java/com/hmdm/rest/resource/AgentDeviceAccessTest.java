@@ -123,6 +123,8 @@ public class AgentDeviceAccessTest {
             @Override public List<com.hmdm.persistence.domain.ManagedAppPermission> getManagedAppPermissions(Integer id) {
                 return Collections.emptyList();
             }
+            /** Not loaded: the document has no wifiNetworks section, as before 1.12. */
+            @Override public java.util.List<com.hmdm.persistence.domain.ConfigurationWifiNetwork> getWifiNetworks(Integer id) { return null; }
             @Override public List<Application> getPlainConfigurationAppsOptimized(Integer id) { return new ArrayList<>(); }
         };
         AgentCommandDAO commandDAO = new AgentCommandDAO(null, null, null, null) {

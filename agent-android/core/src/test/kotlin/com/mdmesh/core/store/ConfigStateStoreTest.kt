@@ -3,6 +3,7 @@ package com.mdmesh.core.store
 import com.mdmesh.proto.ConfigApplyPayload
 import com.mdmesh.proto.ConfigAppPermissions
 import com.mdmesh.proto.ConfigConnectivity
+import com.mdmesh.proto.ConfigWifiNetwork
 import com.mdmesh.proto.KioskApplyPayload
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -39,6 +40,21 @@ class ConfigStateStoreTest {
         assertNull(s.delivered)
         assertEquals(emptyList<ConfigAppPermissions>(), s.activeAppPermissions)
         assertEquals(emptySet<String>(), s.unreleased)
+    }
+
+    @Test
+    fun `the Wi-Fi networks the agent saved are kept apart from the documents, and cleared with them`() {
+        val s = InMemoryConfigStateStore()
+        val depot = ConfigWifiNetwork("Depot", ConfigWifiNetwork.WPA, "password1", hidden = true)
+        s.managedWifiNetworks = listOf(depot)
+        s.save(ConfigApplyPayload(revision = "r1"))
+        s.delivered = ConfigApplyPayload(revision = "r2")
+        assertEquals(listOf(depot), s.managedWifiNetworks)
+        s.clear()
+        assertEquals(emptyList<ConfigWifiNetwork>(), s.managedWifiNetworks)
+        // As SharedPrefsConfigStateStore keeps them: the password survives the round trip (forgetting needs it).
+        val stored = ConfigStateCodec.encode(ConfigApplyPayload(revision = "", wifiNetworks = listOf(depot)))
+        assertEquals(listOf(depot), ConfigStateCodec.decode(stored)?.wifiNetworks)
     }
 
     @Test

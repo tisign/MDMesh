@@ -145,6 +145,9 @@ public class ConfigurationDAO extends AbstractLinkedDAO<Configuration, Applicati
             if (configuration.getManagedAppPermissions() != null && !configuration.getManagedAppPermissions().isEmpty()) {
                 this.mapper.insertManagedAppPermissions(configuration.getId(), configuration.getManagedAppPermissions());
             }
+            if (configuration.getWifiNetworks() != null && !configuration.getWifiNetworks().isEmpty()) {
+                this.mapper.insertWifiNetworks(configuration.getId(), configuration.getWifiNetworks());
+            }
             if (configuration.getApplicationUsageParameters() != null && !configuration.getApplicationUsageParameters().isEmpty()) {
                 this.mapper.saveConfigurationApplicationUsageParameters(configuration.getId(), configuration.getApplicationUsageParameters());
             }
@@ -187,6 +190,12 @@ public class ConfigurationDAO extends AbstractLinkedDAO<Configuration, Applicati
                         this.mapper.removeManagedAppPermissions(configuration.getId());
                         if (!configuration.getManagedAppPermissions().isEmpty()) {
                             this.mapper.insertManagedAppPermissions(configuration.getId(), configuration.getManagedAppPermissions());
+                        }
+                    }
+                    if (configuration.getWifiNetworks() != null) {
+                        this.mapper.removeWifiNetworks(configuration.getId());
+                        if (!configuration.getWifiNetworks().isEmpty()) {
+                            this.mapper.insertWifiNetworks(configuration.getId(), configuration.getWifiNetworks());
                         }
                     }
                     if (configuration.getApplicationUsageParameters() != null && !configuration.getApplicationUsageParameters().isEmpty()) {
@@ -287,6 +296,7 @@ public class ConfigurationDAO extends AbstractLinkedDAO<Configuration, Applicati
             final List<ApplicationSetting> appSettings = this.applicationSettingDAO.getApplicationSettingsByConfigurationId(id);
             configuration.setApplicationSettings(appSettings);
             configuration.setManagedAppPermissions(this.mapper.getManagedAppPermissions(id));
+            configuration.setWifiNetworks(this.mapper.getWifiNetworks(id));
 
             final List<ConfigurationApplicationParameters> applicationParameters = this.mapper.getApplicationParameters(id);
             configuration.setApplicationUsageParameters(applicationParameters);

@@ -8,6 +8,7 @@ import com.hmdm.persistence.domain.Configuration;
 import com.hmdm.persistence.domain.Device;
 import com.hmdm.rest.json.agent.DesiredAppPermissions;
 import com.hmdm.rest.json.agent.DesiredConfig;
+import com.hmdm.rest.json.agent.DesiredWifiNetwork;
 import com.hmdm.util.AgentCapabilityTokens;
 import com.hmdm.util.ConfigReconcileDecision;
 import com.hmdm.util.DesiredConfigBuilder;
@@ -75,6 +76,8 @@ public class ConfigReconciler {
         // Null means a legacy server did not understand the section; an empty list deliberately means release every
         // explicit app-permission override the agent applied previously.
         cfg.setManagedAppPermissions(unsecureDAO.getManagedAppPermissions(cfg.getId()));
+        // The same for the Wi-Fi networks the devices save: empty forgets the ones the agent saved before.
+        cfg.setWifiNetworks(unsecureDAO.getWifiNetworks(cfg.getId()));
         // Built now, not when the image was picked: a later base.url change (HTTP -> HTTPS, a new domain) reaches the
         // devices as a new revision instead of a URL the agent refuses.
         if (backgroundImageUrls != null) cfg.setBackgroundImageUrl(backgroundImageUrls.current(cfg));
@@ -84,15 +87,18 @@ public class ConfigReconciler {
 
     /**
      * The document as this device receives it. An agent without {@code app.runtimePermissions} gets it without the
-     * appPermissions section, under the revision of what it gets: it can't apply the rules, and must not be sent the
-     * same document again and again for reporting a revision it never had.
+     * appPermissions section, and one without {@code device.wifiNetworks} without the wifiNetworks section, under the
+     * revision of what it gets: it can't apply that section, and must not be sent the same document again and again
+     * for reporting a revision it never had.
      */
     DesiredConfig currentDocument(Device device, Set<String> deviceTokens) {
         DesiredConfig doc = currentDocument(device);
-        if (doc != null && doc.getAppPermissions() != null && !managesAppPermissions(deviceTokens)) {
-            doc.setAppPermissions(null);
-            doc.setRevision(DesiredConfigBuilder.revision(doc));
-        }
+        if (doc == null) return null;
+        boolean dropRules = doc.getAppPermissions() != null && !managesAppPermissions(deviceTokens);
+        boolean dropNetworks = doc.getWifiNetworks() != null && !managesWifiNetworks(deviceTokens);
+        if (dropRules) doc.setAppPermissions(null);
+        if (dropNetworks) doc.setWifiNetworks(null);
+        if (dropRules || dropNetworks) doc.setRevision(DesiredConfigBuilder.revision(doc));
         return doc;
     }
 
@@ -100,23 +106,32 @@ public class ConfigReconciler {
         return AgentCapabilityTokens.isAllowed(DesiredConfigBuilder.APP_PERMISSIONS_CAPABILITY, deviceTokens);
     }
 
+    private static boolean managesWifiNetworks(Set<String> deviceTokens) {
+        return AgentCapabilityTokens.isAllowed(DesiredConfigBuilder.WIFI_NETWORKS_CAPABILITY, deviceTokens);
+    }
+
     /**
      * The revision the console compares with the one the device applied, for its sync status. An agent that can apply
-     * app permission rules must have applied the whole document. One that can't is in sync with the document it gets
-     * when the configuration has no rules (nothing is missing), and never when it has some: its device doesn't enforce
-     * them, so it must not show as in sync.
+     * a section (app permission rules, Wi-Fi networks) must have applied the whole document. One that can't is in sync
+     * with the document it gets while that section is empty (nothing is missing on its device), and never when the
+     * configuration has rules or networks: its device doesn't have them, so it must not show as in sync.
      *
      * @param doc the configuration's document ({@link #statusDocument}), left as it was; null gives null
      */
     public static String statusRevision(DesiredConfig doc, Set<String> deviceTokens) {
         if (doc == null) return null;
         List<DesiredAppPermissions> rules = doc.getAppPermissions();
-        if (rules == null || !rules.isEmpty() || managesAppPermissions(deviceTokens)) return doc.getRevision();
-        doc.setAppPermissions(null);
+        List<DesiredWifiNetwork> networks = doc.getWifiNetworks();
+        boolean dropRules = rules != null && rules.isEmpty() && !managesAppPermissions(deviceTokens);
+        boolean dropNetworks = networks != null && networks.isEmpty() && !managesWifiNetworks(deviceTokens);
+        if (!dropRules && !dropNetworks) return doc.getRevision();
+        if (dropRules) doc.setAppPermissions(null);
+        if (dropNetworks) doc.setWifiNetworks(null);
         try {
             return DesiredConfigBuilder.revision(doc);
         } finally {
             doc.setAppPermissions(rules);
+            doc.setWifiNetworks(networks);
         }
     }
 

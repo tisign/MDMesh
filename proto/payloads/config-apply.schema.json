@@ -39,6 +39,20 @@
           "permissions": { "type": "object", "additionalProperties": { "enum": ["grant", "deny"] } }
         }
       }
+    },
+    "wifiNetworks": {
+      "type": "array",
+      "description": "1.12: the Wi-Fi networks the device keeps saved, so it joins each by itself (a device shared between sites). Sent only to agents that advertise device.wifiNetworks. Omitted = not managed: nothing is saved or forgotten. An empty list makes the agent forget every network it saved from this section. The agent forgets a network a later list drops, except while it is the device's only connection (deferred). Networks it did not save (the enrollment QR's setup network, ones typed in on the device) are left alone. Sorted by ssid.",
+      "items": {
+        "type": "object",
+        "required": ["ssid", "security"],
+        "properties": {
+          "ssid": { "type": "string", "description": "The network's name, 1 to 32 bytes of UTF-8. Unique in the list." },
+          "security": { "enum": ["WPA", "SAE", "WEP", "NONE"], "description": "WPA = WPA/WPA2 personal, SAE = WPA3 personal (Android 11+, else unsupported), NONE = open. A value the agent doesn't know is reported unsupported." },
+          "password": { "type": "string", "description": "Plain text. WPA: 8 to 63 characters, or 64 hex digits (a raw key). SAE: 1 to 63 characters. WEP: 5, 13 or 16 characters, or 10, 26 or 32 hex digits. Absent for NONE." },
+          "hidden": { "type": "boolean", "description": "true = the network doesn't broadcast its name. Sent only when true." }
+        }
+      }
     }
   }
 }

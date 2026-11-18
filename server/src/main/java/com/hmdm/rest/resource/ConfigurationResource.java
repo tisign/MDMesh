@@ -44,6 +44,7 @@ import com.hmdm.rest.resource.support.KioskBackgroundImageInfo;
 import com.hmdm.security.SecurityContext;
 import com.hmdm.util.DesiredConfigBuilder;
 import com.hmdm.util.KioskExitPin;
+import com.hmdm.util.WifiNetworkRules;
 import com.hmdm.util.FileUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -216,8 +217,12 @@ public class ConfigurationResource {
             notes = "Creates a new configuration (if id is not provided) or update existing one otherwise. " +
                     "An update replaces the configuration: every column, and the applications list, are written " +
                     "as sent, so a column left out becomes null and a missing applications list removes every app. " +
-                    "Only files, applicationSettings, extensions and managedAppPermissions left out (null) are kept; " +
-                    "an empty list (or object) clears them. managedAppPermissions ({applicationId, permission, state}, " +
+                    "Only files, applicationSettings, extensions, managedAppPermissions and wifiNetworks left out " +
+                    "(null) are kept; an empty list (or object) clears them. wifiNetworks ({ssid, securityType, " +
+                    "password, hidden}; securityType WPA, SAE, WEP or NONE) are the Wi-Fi networks the " +
+                    "configuration's devices save, apart from the setup network wifiSSID; a list that breaks " +
+                    "com.hmdm.util.WifiNetworkRules (a blank or duplicated name, a password of the wrong length for " +
+                    "its security, more than 32 networks) is refused with HTTP 400. managedAppPermissions ({applicationId, permission, state}, " +
                     "state grant or deny; absent = Default) keeps only the rules for apps the save installs; a " +
                     "malformed, duplicated or excess rule is refused with HTTP 400. extensions are checked once the user may save (com.hmdm.extension.ConfigurationExtensions), " +
                     "the plugins' validators on the namespaces the save changes: " +
@@ -259,6 +264,7 @@ public class ConfigurationResource {
             throw new BadRequestException("connectivityMode must be adaptive, alwaysOn or null");
         }
         normalizeManagedAppPermissions(configuration);
+        normalizeWifiNetworks(configuration);
         validateBackgroundImageFit(configuration);
         // A cleaned copy of the background image this save hosted: taken back if the save then fails.
         KioskBackgroundImageAssets.Applied imageApplied = null;
@@ -383,6 +389,27 @@ public class ConfigurationResource {
         } catch (RuntimeException e) {
             log.warn("Could not remove the background image copy of a failed save", e);
         }
+    }
+
+    /**
+     * Checks a save's wifiNetworks before anything is written ({@link WifiNetworkRules}), and drops the password an
+     * open network can't have. Null (an older console or API client) keeps what is stored.
+     *
+     * @throws BadRequestException naming the first problem, in the ERROR envelope so the console can show it. It
+     *                             names the network and the field, never a password.
+     */
+    static void normalizeWifiNetworks(Configuration configuration) {
+        List<ConfigurationWifiNetwork> networks = configuration.getWifiNetworks();
+        if (networks == null) return;
+        for (ConfigurationWifiNetwork n : networks) {
+            // Before the check: the console sends "" for the password field it hides on an open network.
+            if (n != null && ConfigurationWifiNetwork.SECURITY_NONE.equals(n.getSecurityType())
+                    && n.getPassword() != null && n.getPassword().isEmpty()) {
+                n.setPassword(null);
+            }
+        }
+        String problem = WifiNetworkRules.problem(networks);
+        if (problem != null) throw badRequest("wifiNetworks: " + problem);
     }
 
     private KioskBackgroundImageAssets.Applied canonicalizeBackgroundImage(Configuration configuration, Configuration stored) {

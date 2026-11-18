@@ -36,6 +36,8 @@ public class ConfigReconcilerPermissionCapabilityTest {
         @Override public Configuration getConfigurationById(Integer id) { return configuration; }
         @Override public List<Application> getPlainConfigurationAppsOptimized(Integer id) { return apps; }
         @Override public List<ManagedAppPermission> getManagedAppPermissions(Integer id) { return permissions; }
+        /** Not loaded: the document has no wifiNetworks section, as before 1.12. */
+        @Override public java.util.List<com.hmdm.persistence.domain.ConfigurationWifiNetwork> getWifiNetworks(Integer id) { return null; }
     }
 
     private static ConfigReconciler reconciler(List<ManagedAppPermission> rules) {

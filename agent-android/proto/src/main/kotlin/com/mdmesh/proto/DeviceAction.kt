@@ -51,10 +51,16 @@ object DeviceAction {
     const val KIOSK_CLEAR_PIN_LOCKOUT = "kiosk.clearPinLockout"
     const val KIOSK_CLEAR_PIN_LOCKOUT_KEY = "kioskClearPinLockout"
 
+    /**
+     * Device key advertised when the agent applies `config.apply` wifiNetworks (protocol 1.12). The server sends the
+     * section, with its Wi-Fi passwords, only to agents that advertise it.
+     */
+    const val WIFI_NETWORKS_KEY = "wifiNetworks"
+
     /** Keys (after the `device.` prefix) advertised in `capabilities.device`. */
     val ADVERTISED_KEYS: List<String> = listOf(
         "lock", "reboot", "lockscreenMessage", "alert", "ring", "ringStop",
         "passcodeReset", "wipe", "powerMode", "locationMode", "configApply", LOCATION_OFF_KEY,
-        KIOSK_CLEAR_PIN_LOCKOUT_KEY,
+        KIOSK_CLEAR_PIN_LOCKOUT_KEY, WIFI_NETWORKS_KEY,
     )
 }

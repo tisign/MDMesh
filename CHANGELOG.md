@@ -9,6 +9,17 @@ Unreleased.
 
 ## Unreleased
 
+Upgrading
+- The database adds one table (`configurationWifiNetworks`) on start.
+
+New
+- Configurations → Network → **Wi-Fi networks**: list the Wi-Fi network of every site, and each device on the
+  configuration saves them all and joins them by itself. A tablet shared between sites needs no Wi-Fi typed in when
+  it arrives. The enrollment QR code still carries one setup network (Android's limit); the others reach the device
+  as soon as it enrolls. Taking a network off the list makes devices forget it, except while it is a device's only
+  connection: it then stays until the device is online another way. Needs the next agent release; a device on an
+  older agent shows as out of sync while its configuration lists networks.
+
 Fixes
 - Kiosk: Back on the kiosk home could land on the MDMesh status screen, still locked and with no Return to kiosk,
   after a kiosk was entered while that screen was open (Return to kiosk always did that). The status screen is no

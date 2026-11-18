@@ -43,6 +43,16 @@ describe('outcomeKeyLabel', () => {
       .toMatchObject({ label: 'org.example.maps: camera', text: 'Not requested by this app', kind: 'unsupported' });
   });
 
+  it('labels a configuration’s Wi-Fi network by its name, dots and all, with the usual outcomes', () => {
+    expect(outcomeKeyLabel('wifiNetworks.Depot')).toBe('Wi-Fi network: Depot');
+    expect(outcomeKeyLabel('wifiNetworks.Guest 2.4 GHz')).toBe('Wi-Fi network: Guest 2.4 GHz');
+    expect(outcomeKeyLabel('wifiNetworks.policies.x')).toBe('Wi-Fi network: policies.x');
+    expect(classifyOutcome('wifiNetworks.Depot', 'applied')).toMatchObject({ label: 'Wi-Fi network: Depot', kind: 'applied', text: 'Applied' });
+    expect(classifyOutcome('wifiNetworks.Depot', 'unsupported')).toMatchObject({ kind: 'unsupported', text: 'Not supported' });
+    expect(classifyOutcome('wifiNetworks.Depot', 'failed: wrong password')).toMatchObject({ kind: 'failed', reason: 'wrong password' });
+    expect(classifyOutcome('wifiNetworks.Depot', 'deferred: Wi-Fi is off')).toMatchObject({ kind: 'deferred', reason: 'Wi-Fi is off' });
+  });
+
   it('distinguishes an old Android release from an agent that lacks Location-services support', () => {
     expect(unsupportedOutcomeReason('policies.locationServices', { androidSdkInt: 28, isDeviceOwner: true }))
       .toBe('Requires Android 11 or later (this device is API 28).');

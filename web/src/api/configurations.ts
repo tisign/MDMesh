@@ -54,6 +54,18 @@ export interface ConfigApp {
   longTap?: boolean | null;
 }
 
+/** A Wi-Fi network every device on a configuration saves (Configuration.wifiNetworks entry). */
+export interface WifiNetwork {
+  /** The network's name: 1 to 32 bytes of UTF-8, once per list (case-sensitive). */
+  ssid: string;
+  /** WPA = WPA/WPA2 personal, SAE = WPA3 personal, NONE = open. */
+  securityType: 'WPA' | 'SAE' | 'WEP' | 'NONE';
+  /** Stored and sent to devices in plain text; left out or null for an open network. */
+  password?: string | null;
+  /** The network doesn't broadcast its name. */
+  hidden?: boolean;
+}
+
 // Full configuration. Field access is by key (the editor is schema-driven), so we
 // keep a permissive index signature alongside the well-known fields. The whole object
 // is round-tripped on save (the server replaces all columns), so never send a partial.
@@ -63,6 +75,13 @@ export interface Configuration {
   description?: string;
   qrCodeKey?: string;
   applications?: ConfigApp[];
+  /**
+   * The Wi-Fi networks its devices save, in saved order; the agent adds them right after enrollment (the enrollment
+   * QR carries only the one setup network, `wifiSSID`). The server keeps what is stored when a save leaves it out or
+   * sends null, and replaces the whole list when a save carries one (`[]` clears it). A server from before the list
+   * leaves it out: the editor then sends one only once it was edited.
+   */
+  wifiNetworks?: WifiNetwork[] | null;
   /**
    * Server plugins' and extensions' data by namespace (an extension id, or `<id>.<name>`), each a JSON object. The
    * server keeps what is stored when a save leaves it out, and replaces it whole when a save carries it. Only

@@ -120,6 +120,8 @@ public class AgentKioskEnterImageUrlTest {
                 return c;
             }
             @Override public List<ManagedAppPermission> getManagedAppPermissions(Integer id) { return null; }
+            /** Not loaded: the document has no wifiNetworks section, as before 1.12. */
+            @Override public java.util.List<com.hmdm.persistence.domain.ConfigurationWifiNetwork> getWifiNetworks(Integer id) { return null; }
             @Override public List<Application> getPlainConfigurationAppsOptimized(Integer id) { return new ArrayList<>(); }
         };
         AgentCommandDAO commandDAO = new AgentCommandDAO(null, null, null, null) {
