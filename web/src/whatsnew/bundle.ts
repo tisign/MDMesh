@@ -47,6 +47,6 @@ export async function loadSection(target: WhatsNewTarget): Promise<ChangelogSect
 /** The GitHub release of a version; for Unreleased, the changelog on main. */
 export function releaseNotesUrl(target: WhatsNewTarget): string {
   return target.version === null
-    ? 'https://github.com/MDMesh-app/MDMesh/blob/main/CHANGELOG.md'
-    : `https://github.com/MDMesh-app/MDMesh/releases/tag/v${target.version}`;
+    ? 'https://github.com/tisign/MDMesh/blob/main/CHANGELOG.md'
+    : `https://github.com/tisign/MDMesh/releases/tag/v${target.version}`;
 }

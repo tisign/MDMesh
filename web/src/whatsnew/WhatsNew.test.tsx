@@ -255,7 +255,7 @@ describe('What’s new: the dialog', () => {
     expect(within(d).getByText('vitest').tagName).toBe('CODE');
     expect(within(d).getByText('Settings').tagName).toBe('STRONG');
     expect(within(d).getByRole('link', { name: 'Full release notes on GitHub ↗' }).getAttribute('href')).toBe(
-      'https://github.com/MDMesh-app/MDMesh/releases/tag/v0.4.0',
+      'https://github.com/tisign/MDMesh/releases/tag/v0.4.0',
     );
     // Focus starts at the top of the notes (a long release opens at its title), inside the dialog.
     expect(d.contains(document.activeElement)).toBe(true);

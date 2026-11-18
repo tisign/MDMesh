@@ -37,8 +37,8 @@ describe('whatsNewTarget', () => {
   });
 
   it('links the GitHub release of a version, and the changelog for Unreleased', () => {
-    expect(releaseNotesUrl({ id: '0.4.0', version: '0.4.0' })).toBe('https://github.com/MDMesh-app/MDMesh/releases/tag/v0.4.0');
-    expect(releaseNotesUrl(UNRELEASED)).toBe('https://github.com/MDMesh-app/MDMesh/blob/main/CHANGELOG.md');
+    expect(releaseNotesUrl({ id: '0.4.0', version: '0.4.0' })).toBe('https://github.com/tisign/MDMesh/releases/tag/v0.4.0');
+    expect(releaseNotesUrl(UNRELEASED)).toBe('https://github.com/tisign/MDMesh/blob/main/CHANGELOG.md');
   });
 });
 
