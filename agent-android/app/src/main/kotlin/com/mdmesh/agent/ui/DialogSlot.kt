@@ -40,8 +40,12 @@ interface SlotDialog {
  *
  * Call [save] from `onSaveInstanceState`, [restore] from `onCreate`, [onConfigurationChanged] from the activity's
  * own, and [dismiss] from `onDestroy` (a dialog left showing on a destroyed activity leaks its window).
+ *
+ * @param onClosed called with a dialog's tag once it closed by itself (Cancel, Back, its own confirm or idle timeout),
+ *   leaving the slot empty. Not when the activity closed it ([dismiss]) or replaced it ([show], a rebuild). For an
+ *   activity that is nothing but its dialog and leaves with it.
  */
-class DialogSlot(private val key: String) {
+class DialogSlot(private val key: String, private val onClosed: (tag: String) -> Unit = {}) {
 
     /**
      * Proof that a DialogSlot is the caller of [SlotDialog.show]. Sealed, so only this package of this module could
@@ -66,7 +70,12 @@ class DialogSlot(private val key: String) {
         val entry = tag to dialog
         current = entry
         // Identity check: the old dialog's (asynchronous) dismiss must not clear the new one.
-        dialog.setOnDismiss { if (current === entry) current = null }
+        dialog.setOnDismiss {
+            if (current === entry) {
+                current = null
+                onClosed(tag)
+            }
+        }
         carriedDeadline?.let(dialog::keepIdleDeadline)
         dialog.show(Token)
     }

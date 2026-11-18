@@ -69,6 +69,17 @@ launcher), ignores Back while a kiosk is on, and pins itself again on every resu
 locks and shows the kiosk (`KioskApplier.enterShown`), never "already in this kiosk"; and while a kiosk is saved
 the status screen offers the way back to it (`KioskApplier.showSaved`), lock task on or not.
 
+**A kiosk app asks for the exit PIN.** In a single-app kiosk the launcher's exit is behind the pinned app, so the app
+can start `com.mdmesh.agent.KioskExitActivity` with action `com.mdmesh.action.REQUEST_KIOSK_EXIT`. Exported, and the
+request authorizes nothing: no extra is read, and the prompt is the launcher's (`ExitPinDialog`, `ExitPinGate` with
+its persisted count and lockout, `KioskExitDialogs.onDevicePin`, so none for a console-only kiosk), checked against
+the kiosk on the device when the PIN is submitted. It is its own activity (`singleInstance`, translucent, no
+`lockTaskMode`), not the launcher brought forward: HOME coming to the front in a single-app kiosk counts as the app
+closing and reopens the app over the prompt. Cancel, Back, the idle timeout, the screen going off, or the kiosk being
+replaced close it. The exit is `KioskApplier.exit(expected = …)` through the exit journal, not forced: only the
+launcher can take its own task out of lock task, so an exit Android refuses changes nothing and the prompt says so.
+It records `kioskExit` with the detail `exited on-device from app`.
+
 **The 27 enforced fields**
 
 | Area | Fields |

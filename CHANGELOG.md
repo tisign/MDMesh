@@ -19,6 +19,10 @@ New
   as soon as it enrolls. Taking a network off the list makes devices forget it, except while it is a device's only
   connection: it then stays until the device is online another way. Needs the next agent release; a device on an
   older agent shows as out of sync while its configuration lists networks.
+- Kiosk: an app can open the exit PIN prompt over itself (start `com.mdmesh.action.REQUEST_KIOSK_EXIT` in the
+  agent's package), for one-app kiosks where the MDMesh kiosk screen is behind the app. Same PIN and the same
+  lockout as the launcher's prompt; a kiosk with no exit on the device gives none
+  ([Kiosk mode](docs/KIOSK.md#from-inside-your-own-kiosk-app)). Needs the next agent release.
 
 Fixes
 - Kiosk: Back on the kiosk home could land on the MDMesh status screen, still locked and with no Return to kiosk,

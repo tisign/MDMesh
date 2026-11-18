@@ -89,7 +89,8 @@ if anything goes wrong.
 
 Both are on the MDMesh kiosk screen, not inside the kiosk's apps. In a one-app kiosk the pinned app covers that
 screen, so the exit shows only when the screen does, for example on the **App closed** screen. Plan to end a one-app
-kiosk from the console. The prompt asks for the **Exit PIN**. The right PIN ends kiosk on that device.
+kiosk from the console, or use an app that opens the prompt itself ([below](#from-inside-your-own-kiosk-app)). The
+prompt asks for the **Exit PIN**. The right PIN ends kiosk on that device.
 
 Choose a PIN only your staff know: 6 to 12 digits. With agent 0.5.0 or later the device asks for it on a number pad.
 The console marks a configuration whose PIN is still the old well-known default with **Default PIN**, and one without
@@ -102,6 +103,28 @@ follow the rule.
 
 **No PIN.** With agent 0.3.6 or later, a kiosk without an exit PIN has no exit on the device at all: only the console
 can end it. Older agents let anyone leave a kiosk that has no PIN.
+
+### From inside your own kiosk app
+
+With the agent after 0.5.0, a kiosk app can open the same PIN prompt over itself, for example behind a hidden
+gesture of its own. This is for one-app kiosks, where the MDMesh kiosk screen is behind the app. The app starts an
+activity:
+
+```kotlin
+startActivity(
+    Intent("com.mdmesh.action.REQUEST_KIOSK_EXIT").setPackage("com.mdmesh.agent"), // your agent's package name
+)
+```
+
+The request opens the prompt and nothing more:
+
+- The agent reads nothing from the request. The PIN is typed into the agent's own prompt, checked against the
+  kiosk's current exit PIN, and counted by the same [lockout](#wrong-pins-lock-the-exit) as the launcher's prompt.
+- A kiosk with no exit on the device (no PIN, or exit mode Remote only) gives no prompt. Neither does a device that
+  isn't in a kiosk. The app simply stays in front.
+- **Cancel**, Back, a minute without typing or the screen going off close the prompt, and the app is where it was.
+- The right PIN ends the kiosk as **Exit kiosk** from the console does. The agent records it as an exit made on the
+  device from an app (event `kioskExit`, "exited on-device from app").
 
 ### Wrong PINs lock the exit
 

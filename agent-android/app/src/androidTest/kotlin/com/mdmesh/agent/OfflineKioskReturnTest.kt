@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.accessibility.AccessibilityNodeInfo
@@ -203,6 +204,90 @@ class OfflineKioskReturnTest {
         assertNull(store.load())
     }
 
+    // --- A kiosk app asks for the exit PIN prompt (KioskExitActivity) ------------------------------------------
+
+    /**
+     * A single-app kiosk, where the launcher's exit is behind the app: the app starts the agent's prompt. Cancel goes
+     * back to the app with the kiosk untouched; a wrong PIN counts; the right PIN exits and records where from.
+     * Settings stands in for the kiosk app: it is on every image.
+     */
+    @Test
+    fun aKioskAppCanAskForTheExitPinCancelItAndExit() = runBlocking {
+        enterSingleAppKiosk()
+        requestExitPrompt()
+        awaitCondition { pinField() != null }
+        captureScreen("kiosk-app-exit-prompt.png")
+        typePin("wrong-pin")
+        click("Exit")
+        awaitCondition { pinField() != null && node("Exit kiosk") != null }
+        assertTrue(locked())
+        assertEquals(singleApp, store.load())
+        click("Cancel")
+        awaitCondition { ui.rootInActiveWindow?.packageName?.toString() == KIOSK_APP }
+        assertTrue("Cancel leaves the kiosk on", locked())
+
+        requestExitPrompt()
+        awaitCondition { pinField() != null }
+        val exitStartedAt = System.currentTimeMillis()
+        typePin(requireNotNull(singleApp.password))
+        click("Exit")
+        awaitCondition { !locked() && store.load() == null }
+        awaitCondition { ui.rootInActiveWindow?.packageName?.toString() == oemHomePackage }
+        val eventLog = EventLog(context)
+        val events = eventLog.drain()
+        try {
+            assertEquals(1, events.count {
+                it.type == "kioskExit" && it.detail == KioskExitActivity.EXIT_EVENT && it.ts >= exitStartedAt
+            })
+        } finally {
+            eventLog.restore(events)
+        }
+    }
+
+    /** A kiosk that can only be left from the console gives an app no prompt either. */
+    @Test
+    fun aConsoleOnlyKioskGivesAnAppNoPrompt() = runBlocking {
+        enterSingleAppKiosk(singleApp.copy(exitMode = "remote"))
+        requestExitPrompt()
+        SystemClock.sleep(PROMPT_SETTLE_MS)
+        assertNull(pinField())
+        assertEquals(KIOSK_APP, ui.rootInActiveWindow?.packageName?.toString())
+        assertTrue(locked())
+    }
+
+    private val singleApp get() = payload.copy(
+        mode = "single", allowedPackages = listOf(KIOSK_APP), pinPackage = KIOSK_APP, exitMode = "gesture",
+        features = KioskFeaturesDto(home = false),
+    )
+
+    private suspend fun enterSingleAppKiosk(kiosk: KioskApplyPayload = singleApp) {
+        val result = configApplier.apply(ConfigApplyPayload(revision = "test-single", kiosk = kiosk))
+        assertTrue(ConfigApplier.succeeded(result))
+        awaitCondition { locked() && ui.rootInActiveWindow?.packageName?.toString() == KIOSK_APP }
+        ui.waitForIdle(SCREEN_IDLE_MS, TIMEOUT_MS)
+    }
+
+    /**
+     * What a kiosk app does: a start of the agent's action, scoped to the agent's package. Sent from the shell, so it
+     * reaches the agent as it would from an app: another user id, through the exported intent filter.
+     */
+    private fun requestExitPrompt() {
+        shell("am start -a ${KioskExitActivity.ACTION} -p ${context.packageName}")
+    }
+
+    private fun pinField(): AccessibilityNodeInfo? = findNode(ui.rootInActiveWindow) { it.isEditable }
+
+    private fun typePin(pin: String) {
+        requireNotNull(pinField()).performAction(
+            AccessibilityNodeInfo.ACTION_SET_TEXT,
+            Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, pin) },
+        )
+    }
+
+    private fun shell(command: String) {
+        ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(command)).use { it.readBytes() }
+    }
+
     private fun openAgent() {
         context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
@@ -264,6 +349,10 @@ class OfflineKioskReturnTest {
         const val POLL_MS = 100L
         const val SCREEN_IDLE_MS = 500L
         const val BACK_PRESSES = 3
+        const val PROMPT_SETTLE_MS = 2_000L
+
+        /** Stands in for a kiosk app in the single-app tests: installed on every system image. */
+        const val KIOSK_APP = "com.android.settings"
         const val BACK_SETTLE_MS = 700L
     }
 }

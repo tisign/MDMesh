@@ -18,6 +18,15 @@
         <item name="alertDialogTheme">@style/ThemeOverlay.MdmAgent.Dialog</item>
     </style>
 
+    <!-- An activity that is only its dialog (KioskExitActivity, opened by a kiosk app): nothing of its own is drawn,
+         so the app that asked stays visible behind the dialog and its scrim. -->
+    <style name="Theme.MdmAgent.DialogOnly">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
     <!-- The dialog window (androidx.appcompat AlertDialog): v2 Modal surface, 16dp corners, scrim. Its content is
          our own layout, mdm_dialog.xml (MdmDialog), not AppCompat's alert template; this overlay themes its field. -->
     <style name="ThemeOverlay.MdmAgent.Dialog" parent="Theme.AppCompat.DayNight.Dialog.Alert">

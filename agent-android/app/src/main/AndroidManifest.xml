@@ -96,6 +96,27 @@
             android:stateNotNeeded="true"
             android:lockTaskMode="if_whitelisted" />
 
+        <!-- A kiosk app asks for the exit PIN prompt: startActivity with this action, typically from a hidden
+             gesture of its own, because in a single-app kiosk the launcher's exit affordance is behind the app.
+             Exported so any allowed app can ask; the request authorizes nothing (extras are never read): the prompt
+             is the launcher's own, with the same PIN, lockout and "no exit on this device" rule.
+             singleInstance: never inside the asking app's task, and one prompt however often it is asked.
+             No lockTaskMode: started inside a kiosk it joins the locked tasks like any allowed activity; with
+             "if_whitelisted" it would lock itself when started outside one.
+             configChanges as the launcher's: a rotation rebuilds the prompt in place, with what was typed. -->
+        <activity
+            android:name=".KioskExitActivity"
+            android:configChanges="uiMode|orientation|screenSize|smallestScreenSize|screenLayout|fontScale|density|keyboard|keyboardHidden|navigation"
+            android:exported="true"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.MdmAgent.DialogOnly">
+            <intent-filter>
+                <action android:name="com.mdmesh.action.REQUEST_KIOSK_EXIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- HOME claim, disabled by default. kiosk.enter enables it + pins it as the persistent
              preferred HOME; kiosk.exit disables it so HOME falls back to the OEM launcher. -->
         <activity-alias

@@ -107,7 +107,8 @@ adb shell am instrument -w -r -e class com.mdmesh.agent.OfflineKioskReturnTest \
 CI neither compiles nor runs `OfflineKioskReturnTest`: build it with the first command above after changing the
 classes it uses. The tests skip unless running on an offline Device Owner Android emulator with no existing kiosk or
 saved/delivered configuration. It also covers Back on the kiosk HOME after a kiosk was entered with the status screen
-open, and the status screen's Back to kiosk.
+open, the status screen's Back to kiosk, and the exit PIN prompt a kiosk app asks for (Settings stands in for the
+app, the request is sent from the shell).
 
 `com.mdmesh.agent.policy.WifiNetworksDeviceTest` runs the same way (Wi-Fi on or off, Android 12 or later): it saves,
 updates and forgets Wi-Fi networks through Android's real Wi-Fi service, the part of `config.apply` wifiNetworks the
