@@ -17,8 +17,8 @@ Upgrading
   are signed with the fork's own keys, not MDMesh-app's. An install set up from MDMesh-app/MDMesh follows it with
   `IMAGE_OWNER=tisign` and `GITHUB_REPO=tisign/MDMesh` in its `.env`, and needs this fork's supervisor image before
   it applies the update: a supervisor checks a release against the key built into it.
-- A device enrolled with another build of the agent can't update to this one in place, as Android refuses an update
-  signed with a different key: factory-reset it and enroll it again.
+- A device whose agent is signed with another key, as on every device enrolled with MDMesh-app's releases, can't
+  update to this agent in place (Android refuses it): factory-reset it and enroll it again.
 - Coming from 0.4.x, v0.5.0's notes apply too
   ([UPGRADING, v0.5.0](https://github.com/tisign/MDMesh/blob/main/docs/UPGRADING.md#v050)).
 - The database adds one table (`configurationWifiNetworks`) on start.
