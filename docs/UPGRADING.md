@@ -190,7 +190,7 @@ don't get Clear PIN lockout (the console disables it for a device on an older ag
 older agents). It also works with a 0.4.0 server, which sends none of these and ignores the attempt id: an
 enrollment there works as before, it just can't be resumed.
 
-The agent after 0.5.0 speaks protocol 1.12: it saves a configuration's Wi-Fi networks on the device and forgets the
+Agent 0.5.1 speaks protocol 1.12: it saves a configuration's Wi-Fi networks on the device and forgets the
 ones taken off the list. Older agents are never sent the networks (or their passwords), and their devices show as out
 of sync while a configuration lists any. It also works with a 0.5.0 server, which sends none.
 

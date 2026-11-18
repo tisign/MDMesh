@@ -9,7 +9,18 @@ Unreleased.
 
 ## Unreleased
 
+## v0.5.1 — 2026-11-18
+
 Upgrading
+- This is the first release published from the fork [tisign/MDMesh](https://github.com/tisign/MDMesh). Its images
+  are `ghcr.io/tisign/mdmesh-server`, `mdmesh-web` and `mdmesh-supervisor`, and its agent APK and release manifest
+  are signed with the fork's own keys, not MDMesh-app's. An install set up from MDMesh-app/MDMesh follows it with
+  `IMAGE_OWNER=tisign` and `GITHUB_REPO=tisign/MDMesh` in its `.env`, and needs this fork's supervisor image before
+  it applies the update: a supervisor checks a release against the key built into it.
+- A device enrolled with another build of the agent can't update to this one in place, as Android refuses an update
+  signed with a different key: factory-reset it and enroll it again.
+- Coming from 0.4.x, v0.5.0's notes apply too
+  ([UPGRADING, v0.5.0](https://github.com/tisign/MDMesh/blob/main/docs/UPGRADING.md#v050)).
 - The database adds one table (`configurationWifiNetworks`) on start.
 
 New
@@ -17,22 +28,23 @@ New
   configuration saves them all and joins them by itself. A tablet shared between sites needs no Wi-Fi typed in when
   it arrives. The enrollment QR code still carries one setup network (Android's limit); the others reach the device
   as soon as it enrolls. Taking a network off the list makes devices forget it, except while it is a device's only
-  connection: it then stays until the device is online another way. Needs the next agent release; a device on an
-  older agent shows as out of sync while its configuration lists networks.
+  connection: it then stays until the device is online another way. Needs agent 0.5.1; a device on an older agent
+  shows as out of sync while its configuration lists networks.
 - Kiosk: an app can open the exit PIN prompt over itself (start `com.mdmesh.action.REQUEST_KIOSK_EXIT` in the
   agent's package), for one-app kiosks where the MDMesh kiosk screen is behind the app. Same PIN and the same
   lockout as the launcher's prompt; a kiosk with no exit on the device gives none
-  ([Kiosk mode](docs/KIOSK.md#from-inside-your-own-kiosk-app)). Needs the next agent release.
+  ([Kiosk mode](https://github.com/tisign/MDMesh/blob/main/docs/KIOSK.md#from-inside-your-own-kiosk-app)). Needs
+  agent 0.5.1.
 
 Fixes
 - Kiosk: Back on the kiosk home could land on the MDMesh status screen, still locked and with no Return to kiosk,
   after a kiosk was entered while that screen was open (Return to kiosk always did that). The status screen is no
   longer locked under the kiosk, Back stays on the kiosk home, and whenever a kiosk is on the status screen offers
-  **Back to kiosk** (or **Return to kiosk**, if Android dropped the lock). Needs the next agent release.
+  **Back to kiosk** (or **Return to kiosk**, if Android dropped the lock). Needs agent 0.5.1.
 - Kiosk: on a device enrolled by QR code, a configuration's kiosk started while Android's setup wizard was still
   open, and could leave the device unable to finish setup. The kiosk now waits for the wizard and starts by itself
-  when it is done, offline too; until then it shows as failed with "Waiting for Android setup to finish". Needs the
-  next agent release.
+  when it is done, offline too; until then it shows as failed with "Waiting for Android setup to finish". Needs
+  agent 0.5.1.
 
 ## v0.5.0 — 2026-11-17
 

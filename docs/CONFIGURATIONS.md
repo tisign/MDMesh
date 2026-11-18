@@ -58,7 +58,7 @@ Most of these settings have three states:
 
 | Section | Settings |
 |---------|----------|
-| Network | **Wi-Fi settings**, **Wi-Fi radio** (agent 0.3.4), **Location services** (agent 0.5.0, Android 11 or later), **Bluetooth**, **Location reporting**, **Connectivity** (agent 0.4.0), **Wi-Fi networks** (agent after 0.5.0, [below](#wi-fi-networks)) |
+| Network | **Wi-Fi settings**, **Wi-Fi radio** (agent 0.3.4), **Location services** (agent 0.5.0, Android 11 or later), **Bluetooth**, **Location reporting**, **Connectivity** (agent 0.4.0), **Wi-Fi networks** (agent 0.5.1, [below](#wi-fi-networks)) |
 | Security | **Camera**, **USB storage**, **Screenshots**, **Factory reset**, **Safe Mode** |
 
 **Not managed doesn't undo a block.** Switching a setting from Block to Not managed leaves the device as it is,
@@ -75,7 +75,7 @@ to the server. Each setting's help text in the console explains the details.
 
 #### Wi-Fi networks
 
-**Wi-Fi networks** (agent after 0.5.0) is a list of networks every device on the configuration saves: name (SSID),
+**Wi-Fi networks** (agent 0.5.1) is a list of networks every device on the configuration saves: name (SSID),
 security (Open, WPA/WPA2, WPA3 or WEP), password, and whether the network hides its name. Use it for devices that
 move between sites: list each site's network once, and a device joins it by itself when it gets there.
 

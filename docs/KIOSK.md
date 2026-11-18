@@ -32,8 +32,8 @@ the configuration gets the same kiosk.
 Devices apply the change at their next check-in, usually within seconds
 ([how configurations are applied](CONFIGURATIONS.md#how-a-configuration-reaches-devices)).
 
-A device enrolled by QR code gets its configuration while Android's setup wizard still has steps to go. With the
-agent after 0.5.0 the kiosk waits until the wizard has finished, then starts by itself (offline too, and after a
+A device enrolled by QR code gets its configuration while Android's setup wizard still has steps to go. With
+agent 0.5.1 the kiosk waits until the wizard has finished, then starts by itself (offline too, and after a
 restart). Until then the kiosk shows as failed with "Waiting for Android setup to finish". Earlier agents started
 the kiosk over the wizard, which could leave the device unable to finish setup.
 
@@ -111,7 +111,7 @@ can end it. Older agents let anyone leave a kiosk that has no PIN.
 
 ### From inside your own kiosk app
 
-With the agent after 0.5.0, a kiosk app can open the same PIN prompt over itself, for example behind a hidden
+With agent 0.5.1, a kiosk app can open the same PIN prompt over itself, for example behind a hidden
 gesture of its own. This is for one-app kiosks, where the MDMesh kiosk screen is behind the app. The app starts an
 activity:
 
@@ -181,7 +181,7 @@ With agent 0.5.0 or later, after the kiosk ends (with the exit PIN or from the c
 device offers **Return to kiosk** while the device's configuration has kiosk on. It works offline. A kiosk with no
 exit on the device asks once more before it locks, because only the console can unlock it.
 
-While a kiosk is on, the same screen offers **Back to kiosk** instead (agent after 0.5.0): it goes straight back to
+While a kiosk is on, the same screen offers **Back to kiosk** instead (agent 0.5.1): it goes straight back to
 the kiosk's own screen, asking nothing, because nothing new is locked. If Android has dropped the lock under a
 running kiosk, the screen says the device isn't locked to its kiosk and **Return to kiosk** locks it again. Either
 way, the MDMesh app in front of a running kiosk is never a dead end.
@@ -197,7 +197,7 @@ admin ends it from the console.
 | What you see | What to check |
 |---|---|
 | Kiosk doesn't start | The device page's configuration panel: the device must be in sync and Device Owner. The device's agent must support configuration sync (**Agent too old** means it doesn't). |
-| Kiosk failed with "Waiting for Android setup to finish" | The device was enrolled by QR code and its Android setup wizard is still open. Finish the wizard on the device: the kiosk then starts by itself, offline too (agent after 0.5.0). Until then the configuration shows as not applied. |
+| Kiosk failed with "Waiting for Android setup to finish" | The device was enrolled by QR code and its Android setup wizard is still open. Finish the wizard on the device: the kiosk then starts by itself, offline too (agent 0.5.1). Until then the configuration shows as not applied. |
 | **Return to configured kiosk** is missing or unavailable | The hint under the **Kiosk & apps** buttons says why: for example no configuration, kiosk off in the configuration, no app set to Install and shown in kiosk, or the device is already in that kiosk. |
 | Grid instead of the main app | The main app isn't installed yet, or more than one app is shown in kiosk. Use **Install configuration apps** on the device page. |
 | Home or notifications still available | Check **Home button** and **Notifications**. A custom kiosk always allows them. |

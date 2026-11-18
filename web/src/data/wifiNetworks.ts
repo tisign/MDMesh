@@ -9,8 +9,8 @@ export type WifiSecurityType = WifiNetwork['securityType'];
 export const WIFI_NETWORKS_MAX = 32;
 /** The longest network name, in bytes of UTF-8. */
 const WIFI_SSID_MAX_BYTES = 32;
-/** The last agent release without the list: devices need a newer one. */
-export const WIFI_NETWORKS_AFTER_AGENT = '0.5.0';
+/** The agent release that saves the list; a device on an older one shows as out of sync. */
+export const WIFI_NETWORKS_AGENT = '0.5.1';
 
 /** The security types, in the order the editor lists them. */
 export const WIFI_SECURITY_OPTIONS: ReadonlyArray<{ value: WifiSecurityType; label: string }> = [

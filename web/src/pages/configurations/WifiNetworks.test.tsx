@@ -107,9 +107,9 @@ describe('configuration editor: Wi-Fi networks', () => {
     await loaded();
     expect(within(card()).getByText(/Saved on every device with this configuration\. Passwords are kept in plain text\./)).toBeTruthy();
     expect(within(card()).getByText('No networks yet.')).toBeTruthy();
-    expect(within(card()).getByText('After agent 0.5.0')).toBeTruthy();
+    expect(within(card()).getByText('Agent 0.5.1+')).toBeTruthy();
     fireEvent.click(within(card().querySelector('.v2-cfged-wifi')!).getByRole('button', { name: 'Learn more' }));
-    expect(within(card()).getByText(/sent to devices in plain text, like the setup Wi-Fi password\..*Removing a network here makes devices forget it.*Needs an agent newer than 0\.5\.0/)).toBeTruthy();
+    expect(within(card()).getByText(/sent to devices in plain text, like the setup Wi-Fi password\..*Removing a network here makes devices forget it.*Needs agent 0\.5\.1 or later/)).toBeTruthy();
     const enrollment = document.getElementById('enrollment')!;
     expect(within(enrollment).getByText(/The QR code can carry only this one network\..*Network → Wi-Fi networks/)).toBeTruthy();
     // The setup Wi-Fi fields are as they were.

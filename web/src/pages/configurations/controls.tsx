@@ -311,15 +311,12 @@ export function FieldHelp({ text, more }: { text: string; more?: string }): Reac
   );
 }
 
-/**
- * The agent version a setting needs, as a small tag: "Agent 0.5+" for 0.5.0. With `after`, the setting needs a release
- * newer than `version` (one that has no number yet): "After agent 0.5.0".
- */
-export function AgentTag({ version, after }: { version: string; after?: boolean }) {
+/** The agent version a setting needs, as a small tag: "Agent 0.5+" for 0.5.0. */
+export function AgentTag({ version }: { version: string }) {
   return (
-    <Tooltip content={after ? `Needs an agent newer than ${version}. Older agents ignore it.` : `Needs agent ${version} or later. Older agents ignore it.`}>
+    <Tooltip content={`Needs agent ${version} or later. Older agents ignore it.`}>
       <Badge tone="outline" size="xs">
-        {after ? `After agent ${version}` : `Agent ${version.replace(/\.0$/, '')}+`}
+        Agent {version.replace(/\.0$/, '')}+
       </Badge>
     </Tooltip>
   );

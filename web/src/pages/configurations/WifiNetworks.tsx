@@ -4,7 +4,7 @@
 import { useRef, useState } from 'react';
 import type { WifiNetwork } from '../../api/configurations';
 import {
-  WIFI_NETWORKS_AFTER_AGENT,
+  WIFI_NETWORKS_AGENT,
   WIFI_NETWORKS_MAX,
   WIFI_SECURITY_OPTIONS,
   editWifiNetwork,
@@ -17,7 +17,7 @@ import { AgentTag, FieldHelp, SecretInput } from './controls';
 
 const HELP = 'Saved on every device with this configuration. Passwords are kept in plain text.';
 const MORE =
-  `A device joins whichever of these networks is in range by itself, so a shared tablet already knows the Wi-Fi at every location. Passwords are stored and sent to devices in plain text, like the setup Wi-Fi password. Hidden network is for one that doesn’t broadcast its name. Removing a network here makes devices forget it, except while it is a device’s only connection. Needs an agent newer than ${WIFI_NETWORKS_AFTER_AGENT}: a device on an older one ignores the list and shows as out of sync.`;
+  `A device joins whichever of these networks is in range by itself, so a shared tablet already knows the Wi-Fi at every location. Passwords are stored and sent to devices in plain text, like the setup Wi-Fi password. Hidden network is for one that doesn’t broadcast its name. Removing a network here makes devices forget it, except while it is a device’s only connection. Needs agent ${WIFI_NETWORKS_AGENT} or later: a device on an older one ignores the list and shows as out of sync.`;
 
 export interface WifiNetworksProps {
   /** The draft's list, in saved order. */
@@ -66,7 +66,7 @@ export function WifiNetworks({ networks, onChange, readOnly, changed, problems, 
       <div className="v2-cfged-eyebrow">
         <div className="v2-cfged-labelline">
           <Eyebrow as="h3">Wi-Fi networks</Eyebrow>
-          <AgentTag version={WIFI_NETWORKS_AFTER_AGENT} after />
+          <AgentTag version={WIFI_NETWORKS_AGENT} />
           {changed && !readOnly ? <ChangedChip /> : null}
         </div>
       </div>
